@@ -8,12 +8,12 @@ interface Props {
 
 export const ElevationChart: React.FC<Props> = ({ onHoverPoint }) => {
   return (
-    <div className="w-full h-full min-h-[160px] p-2">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-full h-40 p-2 flex items-stretch">
+      <ResponsiveContainer width="100%" height={160}>
         <AreaChart
           data={MOCK_ROUTE}
           onMouseMove={(data: any) => {
-            if (data.activeTooltipIndex !== undefined) {
+            if (data && data.activeTooltipIndex !== undefined && data.activeTooltipIndex !== null) {
               onHoverPoint(Number(data.activeTooltipIndex));
             }
           }}

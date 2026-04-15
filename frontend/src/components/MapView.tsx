@@ -17,6 +17,7 @@ export const MapView: React.FC<{ activePointIndex: number | null }> = ({ activeP
   });
 
   const [routeLine, setRouteLine] = useState<any>(null);
+  const [animationProgress, setAnimationProgress] = useState(0);
 
   useEffect(() => {
     // Generate Snake Animation by showing points up to a certain distance over time
@@ -32,6 +33,7 @@ export const MapView: React.FC<{ activePointIndex: number | null }> = ({ activeP
         }
       };
       setRouteLine(geojson);
+      setAnimationProgress(currentPoints);
 
       if (currentPoints < MOCK_ROUTE.length) {
         currentPoints++;
@@ -107,7 +109,7 @@ export const MapView: React.FC<{ activePointIndex: number | null }> = ({ activeP
               </div>
             </Marker>
           )}
-          {routeLine && currentPoints >= MOCK_ROUTE.length && (
+          {routeLine && animationProgress >= MOCK_ROUTE.length && (
             <Marker longitude={MOCK_ROUTE[MOCK_ROUTE.length-1].coordinates[0]} latitude={MOCK_ROUTE[MOCK_ROUTE.length-1].coordinates[1]}>
               <div className="w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center shadow-md">
                 <span className="text-[10px] text-white">E</span>
