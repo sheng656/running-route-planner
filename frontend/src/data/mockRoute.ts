@@ -4,9 +4,11 @@ export interface RoutePoint {
   distance: number; // in meters from start
 }
 
+export const MISSION_BAY_COORDINATES: [number, number] = [174.832, -36.848];
+
 // A simple mock route near Mission Bay, Auckland
 export const MOCK_ROUTE: RoutePoint[] = [
-  { coordinates: [174.832, -36.848], elevation: 5, distance: 0 },
+  { coordinates: MISSION_BAY_COORDINATES, elevation: 5, distance: 0 },
   { coordinates: [174.830, -36.847], elevation: 12, distance: 500 },
   { coordinates: [174.828, -36.846], elevation: 25, distance: 1000 },
   { coordinates: [174.825, -36.845], elevation: 40, distance: 1500 },

@@ -1,18 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RouteConfigurator } from './components/RouteConfigurator';
 import { MapView } from './components/MapView';
 import { ElevationChart } from './components/ElevationChart';
 import { AreaChart, TrendingUp, Map as MapIcon, Star } from 'lucide-react';
-import { MOCK_STATS } from './data/mockRoute';
+import { MISSION_BAY_COORDINATES, MOCK_STATS } from './data/mockRoute';
+
+type RouteMode = 'loop' | 'one-way';
+type LocationSource = 'user' | 'mission-bay';
 
 function App() {
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
+  const [routeMode, setRouteMode] = useState<RouteMode>('loop');
+  const [startPoint, setStartPoint] = useState<[number, number]>(MISSION_BAY_COORDINATES);
+  const [locationSource, setLocationSource] = useState<LocationSource>('mission-bay');
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setStartPoint([position.coords.longitude, position.coords.latitude]);
+        setLocationSource('user');
+      },
+      () => {
+        setStartPoint(MISSION_BAY_COORDINATES);
+        setLocationSource('mission-bay');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 60000,
+      }
+    );
+  }, []);
 
   return (
     <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-white text-slate-900 font-sans">
       {/* Sidebar: Configurator */}
       <aside className="w-full md:w-[350px] lg:w-[400px] h-full overflow-y-auto shrink-0 transition-all border-r border-slate-200">
-        <RouteConfigurator />
+        <RouteConfigurator
+          routeMode={routeMode}
+          onRouteModeChange={setRouteMode}
+          locationSource={locationSource}
+          startPoint={startPoint}
+        />
       </aside>
 
       {/* Main Content Area */}
@@ -39,7 +72,12 @@ function App() {
 
         {/* The Map */}
         <div className="flex-1 bg-slate-50 relative pointer-events-auto overflow-hidden shadow-inner">
-          <MapView activePointIndex={activePointIndex} />
+          <MapView
+            activePointIndex={activePointIndex}
+            routeMode={routeMode}
+            startPoint={startPoint}
+            onStartPointChange={setStartPoint}
+          />
         </div>
 
         {/* Bottom Elevation Profile */}

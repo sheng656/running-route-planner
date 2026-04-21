@@ -5,7 +5,22 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Download, Navigation, Activity } from 'lucide-react';
 
-export const RouteConfigurator: React.FC = () => {
+type RouteMode = 'loop' | 'one-way';
+type LocationSource = 'user' | 'mission-bay';
+
+interface RouteConfiguratorProps {
+  routeMode: RouteMode;
+  onRouteModeChange: (mode: RouteMode) => void;
+  locationSource: LocationSource;
+  startPoint: [number, number];
+}
+
+export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
+  routeMode,
+  onRouteModeChange,
+  locationSource,
+  startPoint,
+}) => {
   const [distance, setDistance] = useState<number[]>([5]);
   const [difficulty, setDifficulty] = useState<string>("moderate");
   const [preferences, setPreferences] = useState<string[]>(["coastal"]);
@@ -34,6 +49,52 @@ export const RouteConfigurator: React.FC = () => {
       </div>
 
       <div className="space-y-6 flex-1">
+        {/* Route Mode */}
+        <div className="space-y-3">
+          <Label className="text-base font-semibold">Route Type</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onRouteModeChange('loop')}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                routeMode === 'loop'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
+              }`}
+            >
+              Loop / Return
+            </button>
+            <button
+              onClick={() => onRouteModeChange('one-way')}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                routeMode === 'one-way'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
+              }`}
+            >
+              One-way
+            </button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Default is Loop/Return, where start and end are the same location.
+          </p>
+        </div>
+
+        {/* Start Location */}
+        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+          <Label className="text-base font-semibold">Start Location</Label>
+          <p className="text-xs text-slate-600">
+            {locationSource === 'user'
+              ? 'Using your current location as the default start point.'
+              : 'Location permission unavailable. Defaulting to Mission Bay, Auckland.'}
+          </p>
+          <p className="text-xs text-slate-500">
+            Drag the pin on the map to move the start point.
+          </p>
+          <p className="text-xs font-medium text-slate-700">
+            {`Lng ${startPoint[0].toFixed(5)}, Lat ${startPoint[1].toFixed(5)}`}
+          </p>
+        </div>
+
         {/* Distance Slider */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">

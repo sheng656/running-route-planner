@@ -1,73 +1,141 @@
-# React + TypeScript + Vite
+# Running Route Planner
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive running route planning project designed for portfolio demonstration.
 
-Currently, two official plugins are available:
+The app focuses on:
+- route configuration UX
+- map-first visualization
+- Garmin-friendly export workflow (planned)
+- low-cost deployment using Vercel + AWS free tier
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Current Status
 
-## React Compiler
+Frontend MVP is implemented in `frontend/` with React + Vite + Tailwind + Mapbox + Recharts.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Backend is not implemented yet and is planned for AWS serverless deployment.
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Frontend (Implemented)
+- React + TypeScript + Vite
+- Tailwind CSS
+- Mapbox GL via `react-map-gl`
+- Recharts for elevation profile
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Backend (Planned)
+- AWS Lambda
+- API Gateway
+- Route data integrations (OpenRouteService / Overpass)
+- GPX/FIT export generation API
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Repository Structure
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+.
+├── frontend/               # Frontend app (React/Vite)
+├── README.md               # Project documentation
+└── LICENSE
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Implemented Features
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Route Configuration Panel
+- Distance slider with quick presets: `3k`, `5k`, `10k`, `Half`, `Full`
+- Difficulty selector: easy / moderate / hard
+- Scenery preference toggles: coastal, park, flat, trails
+- Route type selector:
+  - `Loop / Return` (default, start=end)
+  - `One-way`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Location Behavior
+- On load, app requests browser location permission
+- If permission is granted:
+  - default start location = current user location
+- If permission is denied/unavailable:
+  - default start location = Mission Bay, Auckland
+- Start pin can be dragged directly on the map to choose a custom start location
+
+### Map Experience
+- Real Mapbox 2D map rendering
+- Zoom and pan interactions
+- Animated route drawing
+- Start marker (`S`) and conditional end marker (`E`) for one-way mode
+- Elevation-hover marker sync between chart and map
+
+### Elevation + Insights UI
+- Elevation profile chart
+- Route summary panel (distance, time range, ascent, scenic badge)
+- Scenic text commentary block
+
+### Environment Variable Support
+- Mapbox token is loaded from environment variable:
+  - `VITE_MAPBOX_TOKEN`
+- Files:
+  - `frontend/.env`
+  - `frontend/.env.example`
+
+## Planned Features
+
+### Routing Intelligence
+- Generate real routes from user preferences and distance constraints
+- Prefer coastline/park segments using OSM metadata
+- Slope-aware route scoring
+
+### Export & Device Workflow
+- GPX export for Garmin import
+- Optional FIT export support
+- In-app Garmin import guide UX
+
+### AWS Backend
+- Serverless route generation endpoints (Lambda)
+- API Gateway routing and throttling
+- Caching strategy for free-tier optimization
+- Basic observability/logging setup
+
+### Portfolio Enhancements
+- Better empty/loading/error states
+- More polished mobile interactions
+- Route save/share links
+
+## Local Development
+
+### 1. Install dependencies
+
+```bash
+cd frontend
+npm install
 ```
+
+### 2. Configure Mapbox token
+
+Create `frontend/.env`:
+
+```bash
+VITE_MAPBOX_TOKEN=your_mapbox_public_token
+```
+
+Recommended token restriction setup in Mapbox:
+- `http://localhost:*`
+- `http://127.0.0.1:*`
+- `https://*.vercel.app`
+
+### 3. Run dev server
+
+```bash
+cd frontend
+npm run dev
+```
+
+### 4. Production build
+
+```bash
+cd frontend
+npm run build
+```
+
+## Deployment Plan
+
+- Frontend: Vercel
+- Backend: AWS (Lambda + API Gateway)
+- Goal: keep usage inside free-tier limits
+
