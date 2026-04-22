@@ -1,0 +1,4 @@
+{
+  "body": "{\"routeName\":\"Mission Bay Sample\",\"points\":[{\"coordinates\":[174.832,-36.848],\"elevation\":10},{\"coordinates\":[174.830,-36.847],\"elevation\":20}]}",
+  "httpMethod": "POST"
+}

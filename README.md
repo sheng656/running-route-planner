@@ -12,7 +12,7 @@ The app focuses on:
 
 Frontend MVP is implemented in `frontend/` with React + Vite + Tailwind + Mapbox + Recharts.
 
-Backend is not implemented yet and is planned for AWS serverless deployment.
+Backend initial implementation is now available in `backend/` via AWS SAM.
 
 ## Tech Stack
 
@@ -28,11 +28,19 @@ Backend is not implemented yet and is planned for AWS serverless deployment.
 - Route data integrations (OpenRouteService / Overpass)
 - GPX/FIT export generation API
 
+### Backend (Current - AWS SAM MVP)
+- AWS SAM template with API Gateway + 2 Lambda functions
+- Secrets Manager-backed OpenRouteService key loading
+- `POST /routes/generate` for route generation (OpenRouteService)
+- `POST /routes/export/gpx` for GPX file export
+- `GET /health` for health checks
+
 ## Repository Structure
 
 ```
 .
 ├── frontend/               # Frontend app (React/Vite)
+├── backend/                # AWS SAM backend (Lambda + API Gateway)
 ├── README.md               # Project documentation
 └── LICENSE
 ```
@@ -131,6 +139,14 @@ npm run dev
 ```bash
 cd frontend
 npm run build
+```
+
+### 5. Backend local build
+
+```bash
+cd backend
+npm install
+sam build --template-file template.yaml
 ```
 
 ## Deployment Plan

@@ -13,6 +13,13 @@ interface RouteConfiguratorProps {
   onRouteModeChange: (mode: RouteMode) => void;
   locationSource: LocationSource;
   startPoint: [number, number];
+  onGenerateRoute: (payload: {
+    distanceKm: number;
+    difficulty: 'easy' | 'moderate' | 'hard';
+    preferences: string[];
+  }) => void;
+  onExportGpx: () => void;
+  isGenerating: boolean;
 }
 
 export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
@@ -20,9 +27,12 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   onRouteModeChange,
   locationSource,
   startPoint,
+  onGenerateRoute,
+  onExportGpx,
+  isGenerating,
 }) => {
   const [distance, setDistance] = useState<number[]>([5]);
-  const [difficulty, setDifficulty] = useState<string>("moderate");
+  const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'hard'>('moderate');
   const [preferences, setPreferences] = useState<string[]>(["coastal"]);
 
   const togglePreference = (pref: string) => {
@@ -173,11 +183,21 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
 
       {/* Export Button Area */}
       <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
-        <Button className="w-full h-12 text-lg flex items-center gap-2">
+        <Button
+          className="w-full h-12 text-lg flex items-center gap-2"
+          onClick={() =>
+            onGenerateRoute({
+              distanceKm: distance[0],
+              difficulty,
+              preferences,
+            })
+          }
+          disabled={isGenerating}
+        >
           <Activity className="w-5 h-5" />
-          Generate Route
+          {isGenerating ? 'Generating...' : 'Generate Route'}
         </Button>
-        <Button variant="outline" className="w-full flex items-center gap-2">
+        <Button variant="outline" className="w-full flex items-center gap-2" onClick={onExportGpx}>
           <Download className="w-4 h-4" />
           Export to Garmin (.GPX)
         </Button>

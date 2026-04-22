@@ -3,7 +3,8 @@ import { RouteConfigurator } from './components/RouteConfigurator';
 import { MapView } from './components/MapView';
 import { ElevationChart } from './components/ElevationChart';
 import { AreaChart, TrendingUp, Map as MapIcon, Star } from 'lucide-react';
-import { MISSION_BAY_COORDINATES, MOCK_STATS } from './data/mockRoute';
+import { MISSION_BAY_COORDINATES, MOCK_ROUTE, MOCK_STATS } from './data/mockRoute';
+import { exportRouteToGpx, generateRoute } from './services/routeApi';
 
 type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
@@ -13,6 +14,10 @@ function App() {
   const [routeMode, setRouteMode] = useState<RouteMode>('loop');
   const [startPoint, setStartPoint] = useState<[number, number]>(MISSION_BAY_COORDINATES);
   const [locationSource, setLocationSource] = useState<LocationSource>('mission-bay');
+  const [routePoints, setRoutePoints] = useState(MOCK_ROUTE);
+  const [routeStats, setRouteStats] = useState(MOCK_STATS);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [apiMessage, setApiMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -36,6 +41,58 @@ function App() {
     );
   }, []);
 
+  const handleGenerateRoute = async (payload: {
+    distanceKm: number;
+    difficulty: 'easy' | 'moderate' | 'hard';
+    preferences: string[];
+  }) => {
+    setIsGenerating(true);
+    setApiMessage(null);
+
+    try {
+      const generated = await generateRoute({
+        startPoint,
+        distanceKm: payload.distanceKm,
+        routeMode,
+        difficulty: payload.difficulty,
+        preferences: payload.preferences,
+      });
+
+      setRoutePoints(generated.points);
+      setRouteStats({
+        name: generated.name,
+        distance: generated.distance,
+        durationRange: generated.durationRange,
+        maxElevation: generated.maxElevation,
+        totalAscent: generated.totalAscent,
+        scenicRating: generated.scenicRating,
+      });
+      setApiMessage('Route generated from AWS backend.');
+    } catch (error) {
+      setApiMessage(error instanceof Error ? error.message : 'Route generation failed.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleExportGpx = async () => {
+    setApiMessage(null);
+    try {
+      const blob = await exportRouteToGpx(routeStats.name, routePoints);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${routeStats.name.toLowerCase().replace(/\s+/g, '-')}.gpx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      setApiMessage('GPX exported successfully.');
+    } catch (error) {
+      setApiMessage(error instanceof Error ? error.message : 'GPX export failed.');
+    }
+  };
+
   return (
     <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-white text-slate-900 font-sans">
       {/* Sidebar: Configurator */}
@@ -45,6 +102,9 @@ function App() {
           onRouteModeChange={setRouteMode}
           locationSource={locationSource}
           startPoint={startPoint}
+          onGenerateRoute={handleGenerateRoute}
+          onExportGpx={handleExportGpx}
+          isGenerating={isGenerating}
         />
       </aside>
 
@@ -55,18 +115,19 @@ function App() {
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <MapIcon className="w-5 h-5 text-blue-600" />
-              {MOCK_STATS.name}
+              {routeStats.name}
             </h2>
             <div className="flex flex-wrap gap-4 text-sm text-slate-600 mt-1">
-              <span className="flex items-center gap-1 font-medium text-slate-800"><TrendingUp className="w-4 h-4" /> {MOCK_STATS.distance} km</span>
-              <span className="flex items-center gap-1">⌚ {MOCK_STATS.durationRange}</span>
+              <span className="flex items-center gap-1 font-medium text-slate-800"><TrendingUp className="w-4 h-4" /> {routeStats.distance} km</span>
+              <span className="flex items-center gap-1">⌚ {routeStats.durationRange}</span>
               <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                 {Array.from({ length: MOCK_STATS.scenicRating }).map((_, i) => (
+                 {Array.from({ length: routeStats.scenicRating }).map((_, i) => (
                    <Star key={i} className="w-3 h-3 fill-emerald-500 text-emerald-500" />
                  ))}
                  Scenic
               </span>
             </div>
+            {apiMessage && <p className="mt-1 text-xs text-slate-500">{apiMessage}</p>}
           </div>
         </div>
 
@@ -77,6 +138,7 @@ function App() {
             routeMode={routeMode}
             startPoint={startPoint}
             onStartPointChange={setStartPoint}
+            routePoints={routePoints}
           />
         </div>
 
@@ -88,12 +150,12 @@ function App() {
               Elevation Profile
             </h3>
             <div className="flex gap-4 text-xs font-medium text-slate-500">
-              <span className="bg-slate-100 px-2 py-1 rounded">Max: {MOCK_STATS.maxElevation}m</span>
-              <span className="bg-slate-100 px-2 py-1 rounded">Ascent: {MOCK_STATS.totalAscent}m</span>
+              <span className="bg-slate-100 px-2 py-1 rounded">Max: {routeStats.maxElevation}m</span>
+              <span className="bg-slate-100 px-2 py-1 rounded">Ascent: {routeStats.totalAscent}m</span>
             </div>
           </div>
           
-          <ElevationChart onHoverPoint={setActivePointIndex} />
+          <ElevationChart onHoverPoint={setActivePointIndex} routePoints={routePoints} />
           
           {/* Scenic Review */}
           <div className="mt-2 text-xs text-slate-600 italic px-2">

@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Map, { Layer, Marker, Source } from 'react-map-gl';
 import type { LineLayer } from 'react-map-gl';
-import { MOCK_ROUTE } from '../data/mockRoute';
+import type { RoutePoint } from '../data/mockRoute';
 
 type RouteMode = 'loop' | 'one-way';
 
@@ -11,6 +11,7 @@ interface MapViewProps {
   routeMode: RouteMode;
   startPoint: [number, number];
   onStartPointChange: (coords: [number, number]) => void;
+  routePoints: RoutePoint[];
 }
 
 // A valid Mapbox token is required to render maps.
@@ -22,6 +23,7 @@ export const MapView: React.FC<MapViewProps> = ({
   routeMode,
   startPoint,
   onStartPointChange,
+  routePoints,
 }) => {
   const [viewState, setViewState] = useState({
     longitude: startPoint[0],
@@ -34,18 +36,18 @@ export const MapView: React.FC<MapViewProps> = ({
   const [animationProgress, setAnimationProgress] = useState(0);
 
   const routeCoordinates = useMemo(() => {
-    const anchor = MOCK_ROUTE[0].coordinates;
-    const shifted = MOCK_ROUTE.map((point) => [
-      startPoint[0] + (point.coordinates[0] - anchor[0]),
-      startPoint[1] + (point.coordinates[1] - anchor[1]),
-    ] as [number, number]);
+    const shifted = routePoints.map((point) => point.coordinates);
+
+    if (shifted.length === 0) {
+      return [];
+    }
 
     if (routeMode === 'loop') {
       return [...shifted, shifted[0]];
     }
 
     return shifted;
-  }, [startPoint, routeMode]);
+  }, [routePoints, routeMode]);
 
   useEffect(() => {
     setViewState((prev) => ({

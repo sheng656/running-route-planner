@@ -1,17 +1,18 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { MOCK_ROUTE } from '../data/mockRoute';
+import type { RoutePoint } from '../data/mockRoute';
 
 interface Props {
   onHoverPoint: (index: number | null) => void;
+  routePoints: RoutePoint[];
 }
 
-export const ElevationChart: React.FC<Props> = ({ onHoverPoint }) => {
+export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) => {
   return (
     <div className="w-full h-40 p-2 flex items-stretch">
       <ResponsiveContainer width="100%" height={160}>
         <AreaChart
-          data={MOCK_ROUTE}
+          data={routePoints}
           onMouseMove={(data: any) => {
             if (data && data.activeTooltipIndex !== undefined && data.activeTooltipIndex !== null) {
               onHoverPoint(Number(data.activeTooltipIndex));

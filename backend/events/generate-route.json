@@ -1,0 +1,4 @@
+{
+  "body": "{\"startPoint\":[174.832,-36.848],\"distanceKm\":5,\"routeMode\":\"loop\",\"difficulty\":\"moderate\",\"preferences\":[\"coastal\",\"flat\"]}",
+  "httpMethod": "POST"
+}

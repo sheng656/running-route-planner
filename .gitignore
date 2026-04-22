@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 frontend/.env
 frontend/frontend/.env
+
+# Local implementation notes (do not commit)
+AWS_SAM_ORS_IMPLEMENTATION.local.md
+
+# AWS SAM artifacts
+backend/.aws-sam/
+backend/samconfig.toml
