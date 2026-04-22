@@ -5,14 +5,17 @@ An interactive running route planning project designed for portfolio demonstrati
 The app focuses on:
 - route configuration UX
 - map-first visualization
-- Garmin-friendly export workflow (planned)
+- Garmin-friendly export workflow
 - low-cost deployment using Vercel + AWS free tier
 
 ## Current Status
 
-Frontend MVP is implemented in `frontend/` with React + Vite + Tailwind + Mapbox + Recharts.
+Frontend and backend MVP are both implemented.
 
-Backend initial implementation is now available in `backend/` via AWS SAM.
+Current behavior:
+- no default mock route is rendered on app load
+- route/elevation are generated from backend APIs
+- GPX export is available after route generation
 
 ## Tech Stack
 
@@ -32,7 +35,9 @@ Backend initial implementation is now available in `backend/` via AWS SAM.
 - AWS SAM template with API Gateway + 2 Lambda functions
 - Secrets Manager-backed OpenRouteService key loading
 - `POST /routes/generate` for route generation (OpenRouteService)
+- Real elevation sampled from OpenRouteService directions response (`geojson` + `elevation=true`)
 - `POST /routes/export/gpx` for GPX file export
+- Garmin-friendly GPX 1.1 track output
 - `GET /health` for health checks
 
 ## Repository Structure
@@ -69,11 +74,17 @@ Backend initial implementation is now available in `backend/` via AWS SAM.
 - Animated route drawing
 - Start marker (`S`) and conditional end marker (`E`) for one-way mode
 - Elevation-hover marker sync between chart and map
+- No default Mission Bay demo route shown before generation
 
 ### Elevation + Insights UI
-- Elevation profile chart
+- Elevation profile chart sourced from OpenRouteService elevation data
 - Route summary panel (distance, time range, ascent, scenic badge)
 - Scenic text commentary block
+
+### GPX Export
+- Export route as GPX 1.1 track (`.gpx`) after generation
+- Includes trackpoint coordinates and elevation (`<ele>`) values
+- Output is formatted for Garmin Connect import workflow
 
 ### Environment Variable Support
 - Mapbox token is loaded from environment variable:
@@ -90,7 +101,7 @@ Backend initial implementation is now available in `backend/` via AWS SAM.
 - Slope-aware route scoring
 
 ### Export & Device Workflow
-- GPX export for Garmin import
+- GPX export for Garmin import (implemented)
 - Optional FIT export support
 - In-app Garmin import guide UX
 

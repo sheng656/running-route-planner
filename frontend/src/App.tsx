@@ -3,19 +3,27 @@ import { RouteConfigurator } from './components/RouteConfigurator';
 import { MapView } from './components/MapView';
 import { ElevationChart } from './components/ElevationChart';
 import { AreaChart, TrendingUp, Map as MapIcon, Star } from 'lucide-react';
-import { MISSION_BAY_COORDINATES, MOCK_ROUTE, MOCK_STATS } from './data/mockRoute';
+import { MISSION_BAY_COORDINATES, type RoutePoint } from './data/mockRoute';
 import { exportRouteToGpx, generateRoute } from './services/routeApi';
 
 type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
+type RouteStats = {
+  name: string;
+  distance: number;
+  durationRange: string;
+  maxElevation: number;
+  totalAscent: number;
+  scenicRating: number;
+};
 
 function App() {
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
   const [routeMode, setRouteMode] = useState<RouteMode>('loop');
   const [startPoint, setStartPoint] = useState<[number, number]>(MISSION_BAY_COORDINATES);
   const [locationSource, setLocationSource] = useState<LocationSource>('mission-bay');
-  const [routePoints, setRoutePoints] = useState(MOCK_ROUTE);
-  const [routeStats, setRouteStats] = useState(MOCK_STATS);
+  const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
+  const [routeStats, setRouteStats] = useState<RouteStats | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
 
@@ -76,6 +84,11 @@ function App() {
   };
 
   const handleExportGpx = async () => {
+    if (!routeStats || routePoints.length < 2) {
+      setApiMessage('Generate a route first before exporting GPX.');
+      return;
+    }
+
     setApiMessage(null);
     try {
       const blob = await exportRouteToGpx(routeStats.name, routePoints);
@@ -102,6 +115,7 @@ function App() {
           onRouteModeChange={setRouteMode}
           locationSource={locationSource}
           startPoint={startPoint}
+          canExportGpx={routePoints.length > 1 && !!routeStats}
           onGenerateRoute={handleGenerateRoute}
           onExportGpx={handleExportGpx}
           isGenerating={isGenerating}
@@ -115,16 +129,16 @@ function App() {
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <MapIcon className="w-5 h-5 text-blue-600" />
-              {routeStats.name}
+              {routeStats?.name ?? 'No route generated yet'}
             </h2>
             <div className="flex flex-wrap gap-4 text-sm text-slate-600 mt-1">
-              <span className="flex items-center gap-1 font-medium text-slate-800"><TrendingUp className="w-4 h-4" /> {routeStats.distance} km</span>
-              <span className="flex items-center gap-1">⌚ {routeStats.durationRange}</span>
+              <span className="flex items-center gap-1 font-medium text-slate-800"><TrendingUp className="w-4 h-4" /> {routeStats?.distance ?? '-'} km</span>
+              <span className="flex items-center gap-1">⌚ {routeStats?.durationRange ?? '-'}</span>
               <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                 {Array.from({ length: routeStats.scenicRating }).map((_, i) => (
+                 {Array.from({ length: routeStats?.scenicRating ?? 0 }).map((_, i) => (
                    <Star key={i} className="w-3 h-3 fill-emerald-500 text-emerald-500" />
                  ))}
-                 Scenic
+                 {routeStats ? 'Scenic' : 'Generate to score'}
               </span>
             </div>
             {apiMessage && <p className="mt-1 text-xs text-slate-500">{apiMessage}</p>}
@@ -150,8 +164,8 @@ function App() {
               Elevation Profile
             </h3>
             <div className="flex gap-4 text-xs font-medium text-slate-500">
-              <span className="bg-slate-100 px-2 py-1 rounded">Max: {routeStats.maxElevation}m</span>
-              <span className="bg-slate-100 px-2 py-1 rounded">Ascent: {routeStats.totalAscent}m</span>
+              <span className="bg-slate-100 px-2 py-1 rounded">Max: {routeStats?.maxElevation ?? '-'}m</span>
+              <span className="bg-slate-100 px-2 py-1 rounded">Ascent: {routeStats?.totalAscent ?? '-'}m</span>
             </div>
           </div>
           
@@ -160,7 +174,7 @@ function App() {
           {/* Scenic Review */}
           <div className="mt-2 text-xs text-slate-600 italic px-2">
             <p className="bg-slate-50 border border-slate-100 p-2.5 rounded-md leading-relaxed">
-              "全程 70% 覆盖海景。在 Tamaki Drive 赛段，你可以远眺 Rangitoto 岛。清晨跑步还能避开游客，非常安静。"
+              "该点评将根据路线偏好与区域特征生成。先生成路线，即可查看与你当前结果匹配的路线文字摘要。"
             </p>
           </div>
         </div>

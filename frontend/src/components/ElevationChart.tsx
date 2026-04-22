@@ -8,6 +8,14 @@ interface Props {
 }
 
 export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) => {
+  if (routePoints.length === 0) {
+    return (
+      <div className="w-full h-40 p-2 flex items-center justify-center text-sm text-slate-500 bg-slate-50 rounded-md border border-slate-100">
+        Generate a route to view elevation profile.
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-40 p-2 flex items-stretch">
       <ResponsiveContainer width="100%" height={160}>

@@ -13,6 +13,7 @@ interface RouteConfiguratorProps {
   onRouteModeChange: (mode: RouteMode) => void;
   locationSource: LocationSource;
   startPoint: [number, number];
+  canExportGpx: boolean;
   onGenerateRoute: (payload: {
     distanceKm: number;
     difficulty: 'easy' | 'moderate' | 'hard';
@@ -27,6 +28,7 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   onRouteModeChange,
   locationSource,
   startPoint,
+  canExportGpx,
   onGenerateRoute,
   onExportGpx,
   isGenerating,
@@ -197,7 +199,12 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
           <Activity className="w-5 h-5" />
           {isGenerating ? 'Generating...' : 'Generate Route'}
         </Button>
-        <Button variant="outline" className="w-full flex items-center gap-2" onClick={onExportGpx}>
+        <Button
+          variant="outline"
+          className="w-full flex items-center gap-2"
+          onClick={onExportGpx}
+          disabled={!canExportGpx}
+        >
           <Download className="w-4 h-4" />
           Export to Garmin (.GPX)
         </Button>

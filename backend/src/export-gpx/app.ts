@@ -51,15 +51,16 @@ const parseBody = (event: APIGatewayProxyEvent): ExportGpxRequest | null => {
 const toGpx = (payload: ExportGpxRequest): string => {
   const nowIso = new Date().toISOString();
   const trkpts = payload.points
-    .map((point) => {
+    .map((point, index) => {
       const [lng, lat] = point.coordinates;
       const ele = typeof point.elevation === 'number' ? `<ele>${point.elevation}</ele>` : '';
-      return `<trkpt lat=\"${lat}\" lon=\"${lng}\">${ele}<time>${nowIso}</time></trkpt>`;
+      const timestamp = new Date(Date.now() + index * 1000).toISOString();
+      return `<trkpt lat=\"${lat}\" lon=\"${lng}\">${ele}<time>${timestamp}</time></trkpt>`;
     })
     .join('');
 
   return `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<gpx version=\"1.1\" creator=\"running-route-planner\" xmlns=\"http://www.topografix.com/GPX/1/1\">
+<gpx version=\"1.1\" creator=\"running-route-planner\" xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">
   <metadata>
     <name>${xmlEscape(payload.routeName)}</name>
     <time>${nowIso}</time>
@@ -111,7 +112,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   return {
     statusCode: 200,
-    isBase64Encoded: true,
+    isBase64Encoded: false,
     headers: {
       'Content-Type': 'application/gpx+xml',
       'Content-Disposition': `attachment; filename=\"${fileName}\"`,
@@ -119,6 +120,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       'Access-Control-Allow-Headers': 'Content-Type,Authorization',
       'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
     },
-    body: Buffer.from(gpx, 'utf-8').toString('base64'),
+    body: gpx,
   };
 };

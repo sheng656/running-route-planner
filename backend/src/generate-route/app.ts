@@ -18,6 +18,8 @@ type RoutePoint = {
   distance: number;
 };
 
+type OrsCoordinate = [number, number, number?];
+
 type GenerateRouteResponse = {
   routeId: string;
   name: string;
@@ -122,73 +124,41 @@ const parseRequestBody = (event: APIGatewayProxyEvent): GenerateRouteRequest | n
   }
 };
 
-const decodePolyline = (encoded: string): [number, number][] => {
-  const coordinates: [number, number][] = [];
-  let index = 0;
-  let lat = 0;
-  let lng = 0;
+const distanceBetweenMeters = (a: [number, number], b: [number, number]): number => {
+  const toRad = (value: number): number => (value * Math.PI) / 180;
+  const earthRadiusMeters = 6371000;
+  const lat1 = toRad(a[1]);
+  const lat2 = toRad(b[1]);
+  const latDelta = toRad(b[1] - a[1]);
+  const lngDelta = toRad(b[0] - a[0]);
 
-  while (index < encoded.length) {
-    let shift = 0;
-    let result = 0;
-    let byte: number;
+  const haversine =
+    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(lngDelta / 2) * Math.sin(lngDelta / 2);
 
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-
-    const deltaLat = result & 1 ? ~(result >> 1) : result >> 1;
-    lat += deltaLat;
-
-    shift = 0;
-    result = 0;
-
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-
-    const deltaLng = result & 1 ? ~(result >> 1) : result >> 1;
-    lng += deltaLng;
-
-    coordinates.push([lng / 1e5, lat / 1e5]);
-  }
-
-  return coordinates;
+  const centralAngle = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+  return earthRadiusMeters * centralAngle;
 };
 
-const toRoutePoints = (coordinates: [number, number][], distanceMeters: number): RoutePoint[] => {
+const toRoutePoints = (coordinates: OrsCoordinate[]): RoutePoint[] => {
   if (coordinates.length === 0) {
     return [];
   }
 
-  const step = coordinates.length > 1 ? distanceMeters / (coordinates.length - 1) : distanceMeters;
+  let cumulativeDistance = 0;
+  return coordinates.map((coord, index) => {
+    const current: [number, number] = [coord[0], coord[1]];
+    if (index > 0) {
+      const previous: [number, number] = [coordinates[index - 1][0], coordinates[index - 1][1]];
+      cumulativeDistance += distanceBetweenMeters(previous, current);
+    }
 
-  return coordinates.map((coord, index) => ({
-    coordinates: coord,
-    distance: Math.round(step * index),
-    elevation: 0,
-  }));
-};
-
-const estimateDuration = (distanceKm: number, difficulty: Difficulty): string => {
-  const factor = asDifficultyFactor(difficulty);
-  const minPace = 4.8 * factor;
-  const maxPace = 6.2 * factor;
-  const minMinutes = Math.round(distanceKm * minPace);
-  const maxMinutes = Math.round(distanceKm * maxPace);
-  return `${minMinutes}-${maxMinutes} mins`;
-};
-
-const addSyntheticElevation = (points: RoutePoint[], difficulty: Difficulty): RoutePoint[] => {
-  const amplitude = difficulty === 'easy' ? 12 : difficulty === 'moderate' ? 30 : 60;
-  return points.map((point, index) => ({
-    ...point,
-    elevation: Math.round(10 + amplitude * Math.abs(Math.sin(index / 4))),
-  }));
+    return {
+      coordinates: current,
+      distance: Math.round(cumulativeDistance),
+      elevation: typeof coord[2] === 'number' ? Math.round(coord[2]) : 0,
+    };
+  });
 };
 
 const computeStats = (points: RoutePoint[]) => {
@@ -239,7 +209,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     instructions: false,
   };
 
-  const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/json', {
+  const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
     method: 'POST',
     headers: {
       Authorization: apiKey,
@@ -254,20 +224,26 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
   }
 
   const data = (await response.json()) as {
-    routes?: Array<{
-      summary?: {
-        distance?: number;
+    features?: Array<{
+      geometry?: {
+        type?: string;
+        coordinates?: OrsCoordinate[];
       };
-      geometry?: string;
+      properties?: {
+        summary?: {
+          distance?: number;
+          duration?: number;
+        };
+      };
     }>;
   };
 
-  const route = data.routes?.[0];
-  if (!route?.geometry) {
+  const route = data.features?.[0];
+  if (!route?.geometry?.coordinates || route.geometry.coordinates.length === 0) {
     throw new Error('OpenRouteService returned no route geometry');
   }
 
-  let coordinates = decodePolyline(route.geometry);
+  let coordinates = route.geometry.coordinates;
   if (request.routeMode === 'loop' && coordinates.length > 0) {
     const first = coordinates[0];
     const last = coordinates[coordinates.length - 1];
@@ -276,15 +252,17 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     }
   }
 
-  const measuredDistance = route.summary?.distance ?? targetDistanceMeters;
-  const points = addSyntheticElevation(toRoutePoints(coordinates, measuredDistance), request.difficulty);
+  const points = toRoutePoints(coordinates);
+  const measuredDistance = route.properties?.summary?.distance ?? points[points.length - 1]?.distance ?? targetDistanceMeters;
   const elevationStats = computeStats(points);
+
+  const durationMinutes = Math.max(1, Math.round((route.properties?.summary?.duration ?? request.distanceKm * 6 * 60) / 60));
 
   return {
     routeId: crypto.randomUUID(),
     name: 'Generated Route',
     distance: Math.round((measuredDistance / 1000) * 10) / 10,
-    durationRange: estimateDuration(request.distanceKm, request.difficulty),
+    durationRange: `${durationMinutes} mins`,
     maxElevation: elevationStats.maxElevation,
     totalAscent: elevationStats.totalAscent,
     scenicRating: buildScenicRating(request.preferences),
