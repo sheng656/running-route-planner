@@ -23,6 +23,7 @@ type OrsCoordinate = [number, number, number?];
 type GenerateRouteResponse = {
   routeId: string;
   name: string;
+  scenicSummary: string;
   distance: number;
   durationRange: string;
   maxElevation: number;
@@ -190,22 +191,88 @@ const buildScenicRating = (preferences: string[]): number => {
   return Math.max(1, Math.min(5, seeded));
 };
 
+const hashSeed = (value: string): number => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 2147483647;
+  }
+  return Math.abs(hash);
+};
+
+const toTitleCase = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+
+const buildRouteName = (preferences: string[]): string => {
+  if (preferences.length === 0) {
+    return 'Generated Route';
+  }
+
+  const labels = preferences.map(toTitleCase);
+  const lead = labels.slice(0, 2).join(' + ');
+  return `${lead} Route`;
+};
+
+const buildScenicSummary = (input: {
+  preferences: string[];
+  routeMode: RouteMode;
+  distanceKm: number;
+  maxElevation: number;
+  totalAscent: number;
+}): string => {
+  const preferenceText =
+    input.preferences.length > 0
+      ? `Focus: ${input.preferences.join(', ')}.`
+      : 'Focus: balanced scenery mix.';
+
+  const modeText =
+    input.routeMode === 'loop'
+      ? 'This route returns to your start point.'
+      : 'This route finishes at a different end point.';
+
+  const elevationText =
+    input.maxElevation <= 5
+      ? 'Terrain is mostly flat.'
+      : `Elevation reaches ${input.maxElevation} m with ${input.totalAscent} m total ascent.`;
+
+  return `${preferenceText} ${modeText} Estimated distance is ${input.distanceKm.toFixed(1)} km. ${elevationText}`;
+};
+
 const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise<GenerateRouteResponse> => {
   const apiKey = await resolveApiKeyFromSecret();
 
   const difficultyFactor = asDifficultyFactor(request.difficulty);
   const targetDistanceMeters = request.distanceKm * 1000;
 
+  const normalizedPreferences = [...request.preferences].sort();
+  const preferenceSignature = normalizedPreferences.join('|');
+
+  let roundTripPoints = 4;
+  if (normalizedPreferences.includes('coastal')) {
+    roundTripPoints += 1;
+  }
+  if (normalizedPreferences.includes('park')) {
+    roundTripPoints += 1;
+  }
+  if (normalizedPreferences.includes('trails')) {
+    roundTripPoints += 1;
+  }
+  if (normalizedPreferences.includes('flat')) {
+    roundTripPoints = Math.max(3, roundTripPoints - 1);
+  }
+
+  const seededValue = hashSeed(
+    `${request.startPoint[0].toFixed(5)}:${request.startPoint[1].toFixed(5)}:${request.distanceKm.toFixed(2)}:${request.routeMode}:${request.difficulty}:${preferenceSignature}`
+  );
+
   const body = {
     coordinates: [request.startPoint],
     options: {
       round_trip: {
         length: Math.round(targetDistanceMeters * difficultyFactor),
-        points: 4,
-        seed: Math.floor(Math.random() * 1000),
+        points: roundTripPoints,
+        seed: seededValue % 1000,
       },
     },
-    elevation: false,
+    elevation: true,
     instructions: false,
   };
 
@@ -260,12 +327,19 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 
   return {
     routeId: crypto.randomUUID(),
-    name: 'Generated Route',
+    name: buildRouteName(normalizedPreferences),
+    scenicSummary: buildScenicSummary({
+      preferences: normalizedPreferences,
+      routeMode: request.routeMode,
+      distanceKm: measuredDistance / 1000,
+      maxElevation: elevationStats.maxElevation,
+      totalAscent: elevationStats.totalAscent,
+    }),
     distance: Math.round((measuredDistance / 1000) * 10) / 10,
     durationRange: `${durationMinutes} mins`,
     maxElevation: elevationStats.maxElevation,
     totalAscent: elevationStats.totalAscent,
-    scenicRating: buildScenicRating(request.preferences),
+    scenicRating: buildScenicRating(normalizedPreferences),
     points,
   };
 };

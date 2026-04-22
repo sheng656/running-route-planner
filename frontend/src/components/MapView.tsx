@@ -59,36 +59,46 @@ export const MapView: React.FC<MapViewProps> = ({
 
   useEffect(() => {
     let animationFrameId: number;
-    let timeoutId: number;
-    const minimumPoints = Math.min(2, routeCoordinates.length);
-    let currentPoints = minimumPoints;
 
-    const animateRoute = () => {
-      const geojson = {
+    if (routeCoordinates.length === 0) {
+      setRouteLine(null);
+      setAnimationProgress(0);
+      return;
+    }
+
+    const totalPoints = routeCoordinates.length;
+    const durationMs = Math.min(900, Math.max(250, totalPoints * 6));
+    const startTs = performance.now();
+
+    const updateRouteLine = (visiblePoints: number) => {
+      setRouteLine({
         type: 'Feature',
         properties: {},
         geometry: {
           type: 'LineString',
-          coordinates: routeCoordinates.slice(0, currentPoints),
+          coordinates: routeCoordinates.slice(0, visiblePoints),
         },
-      };
+      });
+      setAnimationProgress(visiblePoints);
+    };
 
-      setRouteLine(geojson);
-      setAnimationProgress(currentPoints);
+    const animateRoute = (nowTs: number) => {
+      const elapsed = nowTs - startTs;
+      const progress = Math.min(1, elapsed / durationMs);
+      const visiblePoints = Math.max(2, Math.min(totalPoints, Math.round(progress * totalPoints)));
 
-      if (currentPoints < routeCoordinates.length) {
-        currentPoints += 1;
-        timeoutId = window.setTimeout(() => {
-          animationFrameId = requestAnimationFrame(animateRoute);
-        }, 80);
+      updateRouteLine(visiblePoints);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animateRoute);
       }
     };
 
-    animateRoute();
+    updateRouteLine(Math.min(2, totalPoints));
+    animationFrameId = requestAnimationFrame(animateRoute);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.clearTimeout(timeoutId);
     };
   }, [routeCoordinates]);
 

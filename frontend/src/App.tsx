@@ -10,6 +10,7 @@ type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
 type RouteStats = {
   name: string;
+  scenicSummary: string;
   distance: number;
   durationRange: string;
   maxElevation: number;
@@ -69,6 +70,7 @@ function App() {
       setRoutePoints(generated.points);
       setRouteStats({
         name: generated.name,
+        scenicSummary: generated.scenicSummary,
         distance: generated.distance,
         durationRange: generated.durationRange,
         maxElevation: generated.maxElevation,
@@ -174,7 +176,7 @@ function App() {
           {/* Scenic Review */}
           <div className="mt-2 text-xs text-slate-600 italic px-2">
             <p className="bg-slate-50 border border-slate-100 p-2.5 rounded-md leading-relaxed">
-              "该点评将根据路线偏好与区域特征生成。先生成路线，即可查看与你当前结果匹配的路线文字摘要。"
+              {routeStats?.scenicSummary ?? 'Generate a route to see a route-specific scenic summary.'}
             </p>
           </div>
         </div>

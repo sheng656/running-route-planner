@@ -14,6 +14,7 @@ export type GenerateRoutePayload = {
 export type GeneratedRoute = {
   routeId: string;
   name: string;
+  scenicSummary: string;
   distance: number;
   durationRange: string;
   maxElevation: number;

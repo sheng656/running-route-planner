@@ -56,6 +56,7 @@ Current behavior:
 - Distance slider with quick presets: `3k`, `5k`, `10k`, `Half`, `Full`
 - Difficulty selector: easy / moderate / hard
 - Scenery preference toggles: coastal, park, flat, trails
+- Scenery preferences are sent to backend and influence round-trip shape/seed and route naming
 - Route type selector:
   - `Loop / Return` (default, start=end)
   - `One-way`
@@ -79,7 +80,7 @@ Current behavior:
 ### Elevation + Insights UI
 - Elevation profile chart sourced from OpenRouteService elevation data
 - Route summary panel (distance, time range, ascent, scenic badge)
-- Scenic text commentary block
+- Scenic summary text generated from backend (English)
 
 ### GPX Export
 - Export route as GPX 1.1 track (`.gpx`) after generation
