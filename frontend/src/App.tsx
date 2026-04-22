@@ -109,9 +109,9 @@ function App() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-white text-slate-900 font-sans">
+    <div className="h-[100dvh] w-full flex flex-col-reverse md:flex-row overflow-hidden bg-white text-slate-900 font-sans">
       {/* Sidebar: Configurator */}
-      <aside className="w-full md:w-[350px] lg:w-[400px] h-full overflow-y-auto shrink-0 transition-all border-r border-slate-200">
+      <aside className="w-full md:w-[350px] lg:w-[400px] h-[45dvh] md:h-full overflow-y-auto shrink-0 transition-all border-t md:border-t-0 md:border-r border-slate-200 bg-slate-50 dark:bg-slate-900 z-20">
         <RouteConfigurator
           routeMode={routeMode}
           onRouteModeChange={setRouteMode}
