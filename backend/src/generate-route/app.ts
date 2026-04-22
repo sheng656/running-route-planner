@@ -20,6 +20,19 @@ type RoutePoint = {
 
 type OrsCoordinate = [number, number, number?];
 
+type OrsRouteFeature = {
+  geometry?: {
+    type?: string;
+    coordinates?: OrsCoordinate[];
+  };
+  properties?: {
+    summary?: {
+      distance?: number;
+      duration?: number;
+    };
+  };
+};
+
 type GenerateRouteResponse = {
   routeId: string;
   name: string;
@@ -40,6 +53,9 @@ type SecretPayload = {
 
 const secretsManagerClient = new SecretsManagerClient({});
 let cachedApiKeyPromise: Promise<string> | null = null;
+const ORS_AVOID_FEATURES_FOOT_WALKING = ['ferries'];
+const ORS_DISTANCE_TOLERANCE_RATIO = 0.4;
+const ORS_MAX_CANDIDATE_ATTEMPTS = 4;
 
 const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
@@ -263,52 +279,124 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     `${request.startPoint[0].toFixed(5)}:${request.startPoint[1].toFixed(5)}:${request.distanceKm.toFixed(2)}:${request.routeMode}:${request.difficulty}:${preferenceSignature}`
   );
 
-  const body = {
-    coordinates: [request.startPoint],
-    options: {
+  const initialAvoidFeatures = [...ORS_AVOID_FEATURES_FOOT_WALKING];
+  if (normalizedPreferences.includes('flat') || request.difficulty === 'easy') {
+    if (!initialAvoidFeatures.includes('steps')) {
+      initialAvoidFeatures.push('steps');
+    }
+  }
+
+  const createRequestBody = (avoidFeatures: string[], seed: number) => {
+    const weightings: Record<string, number> = {};
+    if (normalizedPreferences.includes('park') || normalizedPreferences.includes('trails')) {
+      weightings.green = 1;
+    }
+    if (normalizedPreferences.includes('trails')) {
+      weightings.quiet = 1;
+    }
+
+    const options: any = {
       round_trip: {
         length: Math.round(targetDistanceMeters * difficultyFactor),
         points: roundTripPoints,
-        seed: seededValue % 1000,
+        seed,
       },
-    },
-    elevation: true,
-    instructions: false,
+    };
+
+    if (avoidFeatures.length > 0) {
+      options.avoid_features = avoidFeatures;
+    }
+
+    if (Object.keys(weightings).length > 0) {
+      options.profile_params = { weightings };
+    }
+
+    return {
+      coordinates: [request.startPoint],
+      options,
+      elevation: true,
+      instructions: false,
+    };
   };
 
-  const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
-    method: 'POST',
-    headers: {
-      Authorization: apiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const callOrs = async (seed: number): Promise<OrsRouteFeature> => {
+    const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(createRequestBody(initialAvoidFeatures, seed)),
+    });
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(`OpenRouteService failed: ${response.status} ${message}`);
-  }
+    if (!response.ok) {
+      const message = await response.text();
 
-  const data = (await response.json()) as {
-    features?: Array<{
-      geometry?: {
-        type?: string;
-        coordinates?: OrsCoordinate[];
-      };
-      properties?: {
-        summary?: {
-          distance?: number;
-          duration?: number;
-        };
-      };
-    }>;
+      // Defensive fallback in case ORS rejects avoid_features for this profile/region.
+      if (response.status === 400 && message.includes('avoid_features')) {
+        const retryResponse = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
+          method: 'POST',
+          headers: {
+            Authorization: apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(createRequestBody([], seed)),
+        });
+
+        if (!retryResponse.ok) {
+          const retryMessage = await retryResponse.text();
+          throw new Error(`OpenRouteService failed: ${retryResponse.status} ${retryMessage}`);
+        }
+
+        const retryData = (await retryResponse.json()) as { features?: OrsRouteFeature[] };
+        const retryRoute = retryData.features?.[0];
+        if (!retryRoute?.geometry?.coordinates || retryRoute.geometry.coordinates.length === 0) {
+          throw new Error('OpenRouteService returned no route geometry');
+        }
+        return retryRoute;
+      }
+
+      throw new Error(`OpenRouteService failed: ${response.status} ${message}`);
+    }
+
+    const data = (await response.json()) as { features?: OrsRouteFeature[] };
+    const route = data.features?.[0];
+    if (!route?.geometry?.coordinates || route.geometry.coordinates.length === 0) {
+      throw new Error('OpenRouteService returned no route geometry');
+    }
+    return route;
   };
 
-  const route = data.features?.[0];
-  if (!route?.geometry?.coordinates || route.geometry.coordinates.length === 0) {
-    throw new Error('OpenRouteService returned no route geometry');
+  const candidates: Array<{ route: OrsRouteFeature; measuredDistance: number; errorRatio: number }> = [];
+  for (let i = 0; i < ORS_MAX_CANDIDATE_ATTEMPTS; i += 1) {
+    const seed = (seededValue + i * 137) % 1000;
+    const route = await callOrs(seed);
+    const measuredDistance = route.properties?.summary?.distance ?? 0;
+    if (measuredDistance <= 0) {
+      continue;
+    }
+
+    const errorRatio = Math.abs(measuredDistance - targetDistanceMeters) / targetDistanceMeters;
+    candidates.push({ route, measuredDistance, errorRatio });
+
+    if (errorRatio <= ORS_DISTANCE_TOLERANCE_RATIO) {
+      break;
+    }
   }
+
+  if (candidates.length === 0) {
+    throw new Error('OpenRouteService returned no usable route candidates');
+  }
+
+  candidates.sort((a, b) => a.errorRatio - b.errorRatio);
+  const bestCandidate = candidates[0];
+  if (bestCandidate.errorRatio > ORS_DISTANCE_TOLERANCE_RATIO) {
+    throw new Error(
+      `Generated route deviates too much from target distance (target ${(targetDistanceMeters / 1000).toFixed(1)} km, got ${(bestCandidate.measuredDistance / 1000).toFixed(1)} km)`
+    );
+  }
+
+  const route = bestCandidate.route;
 
   let coordinates = route.geometry.coordinates;
   if (request.routeMode === 'loop' && coordinates.length > 0) {
