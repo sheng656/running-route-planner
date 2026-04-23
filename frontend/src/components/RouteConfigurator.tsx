@@ -35,7 +35,7 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
 }) => {
   const [distance, setDistance] = useState<number[]>([5]);
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'hard'>('moderate');
-  const [preferences, setPreferences] = useState<string[]>(["coastal"]);
+  const [preferences, setPreferences] = useState<string[]>(["green"]);
 
   const togglePreference = (pref: string) => {
     setPreferences(prev => 
@@ -44,10 +44,10 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   };
 
   const prefOptions = [
-    { id: 'coastal', label: 'Coastal / Beach' },
-    { id: 'park', label: 'Park / Greenery' },
-    { id: 'flat', label: 'Strictly Flat' },
-    { id: 'trails', label: 'Off-road Trails' },
+    { id: 'green', label: '🌿 Parks & Greenery', desc: 'Prefer paths through parks, gardens and green areas' },
+    { id: 'quiet', label: '🤫 Quiet Streets', desc: 'Avoid busy roads, prefer calm residential areas' },
+    { id: 'avoid_steps', label: '🚫 No Stairs', desc: 'Avoid routes with steps or staircases' },
+    { id: 'avoid_fords', label: '💧 No Water Crossings', desc: 'Avoid paths crossing streams or fords' },
   ];
 
   return (
@@ -161,21 +161,25 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
 
         {/* Preferences */}
         <div className="space-y-3">
-          <Label className="text-base font-semibold">Scenery Preferences</Label>
-          <div className="flex flex-wrap gap-2">
+          <Label className="text-base font-semibold">Route Preferences</Label>
+          <p className="text-xs text-slate-500">These options directly influence how routes are generated.</p>
+          <div className="grid grid-cols-1 gap-2">
             {prefOptions.map(opt => {
               const isActive = preferences.includes(opt.id);
               return (
                 <button
                   key={opt.id}
                   onClick={() => togglePreference(opt.id)}
-                  className={`px-3 py-1.5 text-sm rounded-full transition-colors border ${
+                  className={`flex flex-col items-start px-3 py-2.5 text-sm rounded-xl transition-all border ${
                     isActive 
-                      ? 'bg-blue-600 text-white border-blue-600' 
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-blue-400'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:shadow-sm'
                   }`}
                 >
-                  {opt.label}
+                  <span className="font-medium">{opt.label}</span>
+                  <span className={`text-xs mt-0.5 ${
+                    isActive ? 'text-blue-100' : 'text-slate-400'
+                  }`}>{opt.desc}</span>
                 </button>
               );
             })}

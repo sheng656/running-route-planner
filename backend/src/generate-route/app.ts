@@ -55,13 +55,25 @@ const secretsManagerClient = new SecretsManagerClient({});
 let cachedApiKeyPromise: Promise<string> | null = null;
 const ORS_AVOID_FEATURES_FOOT_WALKING = ['ferries'];
 const ORS_DISTANCE_TOLERANCE_RATIO = 0.4;
-const ORS_MAX_CANDIDATE_ATTEMPTS = 4;
+const ORS_MAX_CANDIDATE_ATTEMPTS = 12;
 
-const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
+const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGIN || '*')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const resolveAllowedOrigin = (requestOrigin?: string): string => {
+  if (ALLOWED_ORIGINS.includes('*')) return '*';
+  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
+  // Fall back to first configured origin (for non-browser clients)
+  return ALLOWED_ORIGINS[0] ?? '*';
+};
+
+const json = (statusCode: number, payload: unknown, requestOrigin?: string): APIGatewayProxyResult => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
+    'Access-Control-Allow-Origin': resolveAllowedOrigin(requestOrigin),
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
   },
@@ -217,13 +229,20 @@ const hashSeed = (value: string): number => {
 
 const toTitleCase = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
+const PREFERENCE_LABELS: Record<string, string> = {
+  green: 'Green',
+  quiet: 'Quiet',
+  avoid_steps: 'Step-free',
+  avoid_fords: 'Ford-free',
+};
+
 const buildRouteName = (preferences: string[]): string => {
   if (preferences.length === 0) {
     return 'Generated Route';
   }
 
-  const labels = preferences.map(toTitleCase);
-  const lead = labels.slice(0, 2).join(' + ');
+  const labels = preferences.map(p => PREFERENCE_LABELS[p] || toTitleCase(p));
+  const lead = labels.slice(0, 2).join(' & ');
   return `${lead} Route`;
 };
 
@@ -234,10 +253,14 @@ const buildScenicSummary = (input: {
   maxElevation: number;
   totalAscent: number;
 }): string => {
+  const activeLabels = input.preferences
+    .map(p => PREFERENCE_LABELS[p])
+    .filter(Boolean);
+
   const preferenceText =
-    input.preferences.length > 0
-      ? `Focus: ${input.preferences.join(', ')}.`
-      : 'Focus: balanced scenery mix.';
+    activeLabels.length > 0
+      ? `Route style: ${activeLabels.join(', ')}.`
+      : 'Route style: standard.';
 
   const modeText =
     input.routeMode === 'loop'
@@ -261,40 +284,36 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
   const normalizedPreferences = [...request.preferences].sort();
   const preferenceSignature = normalizedPreferences.join('|');
 
-  let roundTripPoints = 4;
-  if (normalizedPreferences.includes('coastal')) {
-    roundTripPoints += 1;
-  }
-  if (normalizedPreferences.includes('park')) {
-    roundTripPoints += 1;
-  }
-  if (normalizedPreferences.includes('trails')) {
-    roundTripPoints += 1;
-  }
-  if (normalizedPreferences.includes('flat')) {
-    roundTripPoints = Math.max(3, roundTripPoints - 1);
-  }
+  const roundTripPoints = Math.max(3, Math.min(8, 4 + Math.floor(request.distanceKm / 5)));
 
+  const randomSalt = Math.floor(Math.random() * 100000);
   const seededValue = hashSeed(
-    `${request.startPoint[0].toFixed(5)}:${request.startPoint[1].toFixed(5)}:${request.distanceKm.toFixed(2)}:${request.routeMode}:${request.difficulty}:${preferenceSignature}`
+    `${request.startPoint[0].toFixed(5)}:${request.startPoint[1].toFixed(5)}:${request.distanceKm.toFixed(2)}:${request.routeMode}:${request.difficulty}:${preferenceSignature}:${randomSalt}`
   );
 
-  const initialAvoidFeatures = [...ORS_AVOID_FEATURES_FOOT_WALKING];
-  if (normalizedPreferences.includes('flat') || request.difficulty === 'easy') {
-    if (!initialAvoidFeatures.includes('steps')) {
-      initialAvoidFeatures.push('steps');
+  // Build avoid_features from preferences
+  const avoidFeatures = [...ORS_AVOID_FEATURES_FOOT_WALKING];
+  if (normalizedPreferences.includes('avoid_steps') || request.difficulty === 'easy') {
+    if (!avoidFeatures.includes('steps')) {
+      avoidFeatures.push('steps');
+    }
+  }
+  if (normalizedPreferences.includes('avoid_fords')) {
+    if (!avoidFeatures.includes('fords')) {
+      avoidFeatures.push('fords');
     }
   }
 
-  const createRequestBody = (avoidFeatures: string[], seed: number) => {
-    const weightings: Record<string, number> = {};
-    if (normalizedPreferences.includes('park') || normalizedPreferences.includes('trails')) {
-      weightings.green = 1;
-    }
-    if (normalizedPreferences.includes('trails')) {
-      weightings.quiet = 1;
-    }
+  // Build weightings from preferences (using factor object format per ORS docs)
+  const weightings: Record<string, { factor: number }> = {};
+  if (normalizedPreferences.includes('green')) {
+    weightings.green = { factor: 1.0 };
+  }
+  if (normalizedPreferences.includes('quiet')) {
+    weightings.quiet = { factor: 1.0 };
+  }
 
+  const createRequestBody = (useAvoidFeatures: string[], seed: number) => {
     const options: any = {
       round_trip: {
         length: Math.round(targetDistanceMeters * difficultyFactor),
@@ -303,8 +322,8 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
       },
     };
 
-    if (avoidFeatures.length > 0) {
-      options.avoid_features = avoidFeatures;
+    if (useAvoidFeatures.length > 0) {
+      options.avoid_features = useAvoidFeatures;
     }
 
     if (Object.keys(weightings).length > 0) {
@@ -326,7 +345,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
         Authorization: apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(createRequestBody(initialAvoidFeatures, seed)),
+      body: JSON.stringify(createRequestBody(avoidFeatures, seed)),
     });
 
     if (!response.ok) {
@@ -390,11 +409,6 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 
   candidates.sort((a, b) => a.errorRatio - b.errorRatio);
   const bestCandidate = candidates[0];
-  if (bestCandidate.errorRatio > ORS_DISTANCE_TOLERANCE_RATIO) {
-    throw new Error(
-      `Generated route deviates too much from target distance (target ${(targetDistanceMeters / 1000).toFixed(1)} km, got ${(bestCandidate.measuredDistance / 1000).toFixed(1)} km)`
-    );
-  }
 
   const route = bestCandidate.route;
 
@@ -422,7 +436,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
       distanceKm: measuredDistance / 1000,
       maxElevation: elevationStats.maxElevation,
       totalAscent: elevationStats.totalAscent,
-    }),
+    }) + (bestCandidate.errorRatio > ORS_DISTANCE_TOLERANCE_RATIO ? ' Note: The route distance deviated from your target due to geographical constraints. Try generating again for a different path.' : ''),
     distance: Math.round((measuredDistance / 1000) * 10) / 10,
     durationRange: `${durationMinutes} mins`,
     maxElevation: elevationStats.maxElevation,
@@ -433,8 +447,10 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 };
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const requestOrigin = event.headers?.origin ?? event.headers?.Origin;
+
   if (event.httpMethod === 'OPTIONS') {
-    return json(200, { ok: true });
+    return json(200, { ok: true }, requestOrigin);
   }
 
   const parsed = parseRequestBody(event);
@@ -442,17 +458,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return json(400, {
       message:
         'Invalid request body. Expected startPoint [lng,lat], distanceKm > 0, routeMode, difficulty, preferences.',
-    });
+    }, requestOrigin);
   }
 
   try {
     const generated = await fetchFromOpenRouteService(parsed);
-    return json(200, generated);
+    return json(200, generated, requestOrigin);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return json(502, {
       message: 'Failed to generate route from OpenRouteService',
       detail: message,
-    });
+    }, requestOrigin);
   }
 };
