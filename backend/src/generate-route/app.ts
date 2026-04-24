@@ -57,23 +57,11 @@ const ORS_AVOID_FEATURES_FOOT_WALKING = ['ferries'];
 const ORS_DISTANCE_TOLERANCE_RATIO = 0.4;
 const ORS_MAX_CANDIDATE_ATTEMPTS = 12;
 
-const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGIN || '*')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
-
-const resolveAllowedOrigin = (requestOrigin?: string): string => {
-  if (ALLOWED_ORIGINS.includes('*')) return '*';
-  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
-  // Fall back to first configured origin (for non-browser clients)
-  return ALLOWED_ORIGINS[0] ?? '*';
-};
-
-const json = (statusCode: number, payload: unknown, requestOrigin?: string): APIGatewayProxyResult => ({
+const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': resolveAllowedOrigin(requestOrigin),
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
   },
@@ -233,7 +221,6 @@ const PREFERENCE_LABELS: Record<string, string> = {
   green: 'Green',
   quiet: 'Quiet',
   avoid_steps: 'Step-free',
-  avoid_fords: 'Ford-free',
 };
 
 const buildRouteName = (preferences: string[]): string => {
@@ -298,23 +285,19 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
       avoidFeatures.push('steps');
     }
   }
-  if (normalizedPreferences.includes('avoid_fords')) {
-    if (!avoidFeatures.includes('fords')) {
-      avoidFeatures.push('fords');
-    }
-  }
 
-  // Build weightings from preferences (using factor object format per ORS docs)
-  const weightings: Record<string, { factor: number }> = {};
+  // Build weightings using plain integer values (0=normal, 1=prefer)
+  // profile_params goes inside options per the ORS v2 GeoJSON endpoint spec
+  const weightings: Record<string, number> = {};
   if (normalizedPreferences.includes('green')) {
-    weightings.green = { factor: 1.0 };
+    weightings.green = 1;
   }
   if (normalizedPreferences.includes('quiet')) {
-    weightings.quiet = { factor: 1.0 };
+    weightings.quiet = 1;
   }
 
   const createRequestBody = (useAvoidFeatures: string[], seed: number) => {
-    const options: any = {
+    const options: Record<string, unknown> = {
       round_trip: {
         length: Math.round(targetDistanceMeters * difficultyFactor),
         points: roundTripPoints,
@@ -447,28 +430,22 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 };
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const requestOrigin = event.headers?.origin ?? event.headers?.Origin;
-
-  if (event.httpMethod === 'OPTIONS') {
-    return json(200, { ok: true }, requestOrigin);
-  }
-
   const parsed = parseRequestBody(event);
   if (!parsed) {
     return json(400, {
       message:
         'Invalid request body. Expected startPoint [lng,lat], distanceKm > 0, routeMode, difficulty, preferences.',
-    }, requestOrigin);
+    });
   }
 
   try {
     const generated = await fetchFromOpenRouteService(parsed);
-    return json(200, generated, requestOrigin);
+    return json(200, generated);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return json(502, {
       message: 'Failed to generate route from OpenRouteService',
       detail: message,
-    }, requestOrigin);
+    });
   }
 };

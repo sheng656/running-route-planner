@@ -44,30 +44,29 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   };
 
   const prefOptions = [
-    { id: 'green', label: '🌿 Parks & Greenery', desc: 'Prefer paths through parks, gardens and green areas' },
-    { id: 'quiet', label: '🤫 Quiet Streets', desc: 'Avoid busy roads, prefer calm residential areas' },
-    { id: 'avoid_steps', label: '🚫 No Stairs', desc: 'Avoid routes with steps or staircases' },
-    { id: 'avoid_fords', label: '💧 No Water Crossings', desc: 'Avoid paths crossing streams or fords' },
+    { id: 'green', label: '🌿 Parks & Greenery' },
+    { id: 'quiet', label: '🤫 Quiet Streets' },
+    { id: 'avoid_steps', label: '🚫 No Stairs' },
   ];
 
   return (
-    <div className="flex flex-col h-full gap-8 p-6 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col h-full gap-4 p-4 lg:p-5 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
-          <Navigation className="w-6 h-6 text-blue-600" />
+        <h1 className="text-xl font-bold tracking-tight mb-0.5 flex items-center gap-2">
+          <Navigation className="w-5 h-5 text-blue-600" />
           Route Configurator
         </h1>
-        <p className="text-sm text-slate-500">Fine-tune your next run seamlessly.</p>
+        <p className="text-xs text-slate-500">Fine-tune your next run seamlessly.</p>
       </div>
 
-      <div className="space-y-6 flex-1">
+      <div className="space-y-4 flex-1">
         {/* Route Mode */}
-        <div className="space-y-3">
-          <Label className="text-base font-semibold">Route Type</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Route Type</Label>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => onRouteModeChange('loop')}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                 routeMode === 'loop'
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
@@ -77,7 +76,7 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
             </button>
             <button
               onClick={() => onRouteModeChange('one-way')}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                 routeMode === 'one-way'
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
@@ -86,32 +85,26 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
               One-way
             </button>
           </div>
-          <p className="text-xs text-slate-500">
-            Default is Loop/Return, where start and end are the same location.
-          </p>
         </div>
 
         {/* Start Location */}
-        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-          <Label className="text-base font-semibold">Start Location</Label>
-          <p className="text-xs text-slate-600">
-            {locationSource === 'user'
-              ? 'Using your current location as the default start point.'
-              : 'Location permission unavailable. Defaulting to Mission Bay, Auckland.'}
-          </p>
+        <div className="rounded-lg border border-slate-200 bg-white p-2.5 space-y-0.5">
+          <Label className="text-sm font-semibold">Start Location</Label>
           <p className="text-xs text-slate-500">
-            Drag the pin on the map to move the start point.
+            {locationSource === 'user'
+              ? 'Using your current location. Drag pin to adjust.'
+              : 'Defaulting to Mission Bay, Auckland. Drag pin to adjust.'}
           </p>
           <p className="text-xs font-medium text-slate-700">
-            {`Lng ${startPoint[0].toFixed(5)}, Lat ${startPoint[1].toFixed(5)}`}
+            {`${startPoint[0].toFixed(5)}, ${startPoint[1].toFixed(5)}`}
           </p>
         </div>
 
         {/* Distance Slider */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-base font-semibold">Target Distance</Label>
-            <span className="text-xl font-bold text-blue-600">{distance[0]} km</span>
+            <Label className="text-sm font-semibold">Target Distance</Label>
+            <span className="text-lg font-bold text-blue-600">{distance[0]} km</span>
           </div>
           <Slider 
             value={distance} 
@@ -121,7 +114,7 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
             onValueChange={setDistance} 
             className="w-full"
           />
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap gap-1.5">
             {[
               { label: '3k', val: 3 },
               { label: '5k', val: 5 },
@@ -132,7 +125,7 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
               <button
                 key={d.label}
                 onClick={() => setDistance([d.val])}
-                className={`px-3 py-1 rounded border text-sm font-medium transition-colors ${
+                className={`px-2.5 py-0.5 rounded border text-xs font-medium transition-colors ${
                   distance[0] === d.val
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
@@ -145,10 +138,10 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
         </div>
 
         {/* Difficulty */}
-        <div className="space-y-3">
-          <Label className="text-base font-semibold">Difficulty / Elevation</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Difficulty / Elevation</Label>
           <Select value={difficulty} onValueChange={setDifficulty}>
-            <SelectTrigger>
+            <SelectTrigger className="h-9">
               <SelectValue placeholder="Select difficulty" />
             </SelectTrigger>
             <SelectContent>
@@ -160,26 +153,22 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
         </div>
 
         {/* Preferences */}
-        <div className="space-y-3">
-          <Label className="text-base font-semibold">Route Preferences</Label>
-          <p className="text-xs text-slate-500">These options directly influence how routes are generated.</p>
-          <div className="grid grid-cols-1 gap-2">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Route Preferences</Label>
+          <div className="flex flex-wrap gap-1.5">
             {prefOptions.map(opt => {
               const isActive = preferences.includes(opt.id);
               return (
                 <button
                   key={opt.id}
                   onClick={() => togglePreference(opt.id)}
-                  className={`flex flex-col items-start px-3 py-2.5 text-sm rounded-xl transition-all border ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border ${
                     isActive 
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:shadow-sm'
+                      ? 'bg-blue-600 text-white border-blue-600' 
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
                   }`}
                 >
-                  <span className="font-medium">{opt.label}</span>
-                  <span className={`text-xs mt-0.5 ${
-                    isActive ? 'text-blue-100' : 'text-slate-400'
-                  }`}>{opt.desc}</span>
+                  {opt.label}
                 </button>
               );
             })}
@@ -187,10 +176,10 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
         </div>
       </div>
 
-      {/* Export Button Area */}
-      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
+      {/* Action Buttons */}
+      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
         <Button
-          className="w-full h-12 text-lg flex items-center gap-2"
+          className="w-full h-10 text-sm flex items-center gap-2"
           onClick={() =>
             onGenerateRoute({
               distanceKm: distance[0],
@@ -200,21 +189,18 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
           }
           disabled={isGenerating}
         >
-          <Activity className="w-5 h-5" />
+          <Activity className="w-4 h-4" />
           {isGenerating ? 'Generating...' : 'Generate Route'}
         </Button>
         <Button
           variant="outline"
-          className="w-full flex items-center gap-2"
+          className="w-full h-9 text-sm flex items-center gap-2"
           onClick={onExportGpx}
           disabled={!canExportGpx}
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
           Export to Garmin (.GPX)
         </Button>
-        <p className="text-xs text-center text-slate-500">
-          Sync with your Garmin Connect app seamlessly.
-        </p>
       </div>
     </div>
   );

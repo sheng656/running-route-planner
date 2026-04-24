@@ -51,7 +51,6 @@ Resources:
       Environment:
         Variables:
           ORS_SECRET_ID: !Ref OpenRouteServiceSecretId
-          ALLOWED_ORIGIN: !Ref AllowedOrigin
       Policies:
         - Statement:
             - Effect: Allow
@@ -80,9 +79,6 @@ Resources:
       FunctionName: running-route-planner-export-gpx
       CodeUri: src/export-gpx/
       Handler: app.handler
-      Environment:
-        Variables:
-          ALLOWED_ORIGIN: !Ref AllowedOrigin
       Events:
         ExportGpx:
           Type: Api
@@ -105,9 +101,6 @@ Resources:
       FunctionName: running-route-planner-health
       CodeUri: src/health/
       Handler: app.handler
-      Environment:
-        Variables:
-          ALLOWED_ORIGIN: !Ref AllowedOrigin
       Events:
         HealthCheck:
           Type: Api

@@ -80,41 +80,18 @@ const sanitizeFileName = (name: string): string => {
   return safe.length > 0 ? safe : 'route';
 };
 
-const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGIN || '*')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
-
-const resolveAllowedOrigin = (requestOrigin?: string): string => {
-  if (ALLOWED_ORIGINS.includes('*')) return '*';
-  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
-  return ALLOWED_ORIGINS[0] ?? '*';
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
 };
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const requestOrigin = event.headers?.origin ?? event.headers?.Origin;
-  const allowedOrigin = resolveAllowedOrigin(requestOrigin);
-
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': allowedOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
-      },
-      body: JSON.stringify({ ok: true }),
-    };
-  }
-
   const body = parseBody(event);
   if (!body) {
     return {
       statusCode: 400,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': allowedOrigin,
-      },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       body: JSON.stringify({
         message: 'Invalid payload. Expected routeName and points with coordinates.',
       }),
@@ -130,9 +107,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     headers: {
       'Content-Type': 'application/gpx+xml',
       'Content-Disposition': `attachment; filename="${fileName}"`,
-      'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-      'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
+      ...CORS_HEADERS,
     },
     body: gpx,
   };

@@ -122,7 +122,7 @@ function App() {
           transition-transform duration-300 ease-in-out z-40
           flex flex-col
           ${isMobileSettingsOpen ? 'translate-y-0' : 'translate-y-[100%] md:translate-y-0'}
-          h-[85dvh] md:h-full rounded-t-3xl md:rounded-none
+          h-[70dvh] md:h-full rounded-t-3xl md:rounded-none
         `}
       >
         {/* Mobile drag handle / close button */}
@@ -165,7 +165,7 @@ function App() {
         </div>
 
         {/* Top Info Banner (Route Stats) */}
-        <div className="absolute top-4 left-4 right-4 z-10 bg-white/90 backdrop-blur-md shadow-lg rounded-2xl p-4 border border-slate-100 flex flex-col pointer-events-auto max-w-2xl mx-auto md:mx-4">
+        <div className="absolute top-4 left-4 right-4 z-10 bg-white/60 backdrop-blur-xl shadow-lg shadow-black/5 rounded-2xl p-4 border border-white/40 flex flex-col pointer-events-auto max-w-2xl mx-auto md:mx-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <MapIcon className="w-5 h-5 text-blue-600" />
             {routeStats?.name ?? 'No route generated yet'}
