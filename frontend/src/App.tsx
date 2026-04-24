@@ -27,7 +27,7 @@ function App() {
   const [routeStats, setRouteStats] = useState<RouteStats | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
-  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(true);
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -184,41 +184,44 @@ function App() {
         </div>
 
         {/* Floating Bottom Elements */}
-        <div className="absolute bottom-6 left-4 right-4 z-10 flex flex-col gap-4 pointer-events-none md:left-auto md:w-[450px]">
+        <div className="absolute bottom-6 left-4 right-4 z-10 flex flex-col gap-3 pointer-events-none md:left-auto md:w-[450px]">
           
           {/* Elevation Profile & Summary (Floating Panel) */}
-          <div className={`bg-white/95 backdrop-blur-md shadow-xl rounded-2xl p-4 border border-slate-100 pointer-events-auto transition-all ${isMobileSettingsOpen ? 'opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto' : 'opacity-100'}`}>
-            <div className="flex justify-between items-center mb-2 px-1">
+          <div className={`bg-white/60 backdrop-blur-xl shadow-lg shadow-black/5 rounded-2xl p-3 border border-white/40 pointer-events-auto transition-all ${isMobileSettingsOpen ? 'opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto' : 'opacity-100'}`}>
+            <div className="flex justify-between items-center mb-1 px-1">
               <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
                 <AreaChart className="w-4 h-4 text-blue-600" /> 
-                Elevation Profile
+                Elevation
               </h3>
-              <div className="flex gap-2 text-xs font-medium text-slate-500">
-                <span className="bg-slate-100 px-2 py-1 rounded-md">Max: {routeStats?.maxElevation ?? '-'}m</span>
-                <span className="bg-slate-100 px-2 py-1 rounded-md">Ascent: {routeStats?.totalAscent ?? '-'}m</span>
+              <div className="flex gap-1.5 text-[10px] font-medium text-slate-500">
+                <span className="bg-white/60 px-1.5 py-0.5 rounded">Peak: {routeStats?.maxElevation ?? '-'}m</span>
+                <span className="bg-white/60 px-1.5 py-0.5 rounded">↑{routeStats?.totalAscent ?? '-'}m</span>
               </div>
             </div>
             
-            <div className="h-24 md:h-32 -mx-2">
+            <div className="h-28 md:h-36">
               <ElevationChart onHoverPoint={setActivePointIndex} routePoints={routePoints} />
             </div>
             
             {/* Scenic Review */}
             {routeStats?.scenicSummary && (
-              <div className="mt-3 text-xs text-slate-600 italic">
-                <p className="bg-blue-50/50 border border-blue-100/50 p-2 rounded-lg leading-relaxed">
-                  {routeStats.scenicSummary}
-                </p>
-              </div>
+              <p className="mt-2 text-[11px] text-slate-500 leading-relaxed px-1 line-clamp-2">
+                {routeStats.scenicSummary}
+              </p>
             )}
           </div>
 
           {/* Mobile "Open Settings" Button (visible when closed) */}
-          <div className="md:hidden flex justify-center pointer-events-auto">
+          <div className="md:hidden flex flex-col items-center gap-2 pointer-events-auto">
+             {!routeStats && !isMobileSettingsOpen && (
+               <p className="text-xs text-slate-500 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/40 shadow-sm">
+                 📍 Drag the pin to set your start point
+               </p>
+             )}
              <button 
                onClick={() => setIsMobileSettingsOpen(true)}
                className={`
-                 flex items-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-full font-semibold shadow-lg shadow-blue-600/30
+                 flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg shadow-blue-600/30
                  transition-all duration-300 transform border border-blue-500
                  ${isMobileSettingsOpen ? 'scale-0 opacity-0 translate-y-10' : 'scale-100 opacity-100 translate-y-0'}
                `}
