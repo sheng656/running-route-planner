@@ -56,6 +56,7 @@ let cachedApiKeyPromise: Promise<string> | null = null;
 const ORS_AVOID_FEATURES_FOOT_WALKING = ['ferries'];
 const ORS_DISTANCE_TOLERANCE_RATIO = 0.4;
 const ORS_MAX_CANDIDATE_ATTEMPTS = 12;
+const ORS_STRAIGHT_LINE_FACTOR = 1.3;
 
 const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
@@ -155,6 +156,34 @@ const distanceBetweenMeters = (a: [number, number], b: [number, number]): number
 
   const centralAngle = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
   return earthRadiusMeters * centralAngle;
+};
+
+const computeDestination = (
+  origin: [number, number],
+  bearingDeg: number,
+  distanceMeters: number
+): [number, number] => {
+  const toRad = (deg: number): number => (deg * Math.PI) / 180;
+  const toDeg = (rad: number): number => (rad * 180) / Math.PI;
+  const R = 6371000;
+
+  const lat1 = toRad(origin[1]);
+  const lon1 = toRad(origin[0]);
+  const bearing = toRad(bearingDeg);
+  const angularDist = distanceMeters / R;
+
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(angularDist) +
+    Math.cos(lat1) * Math.sin(angularDist) * Math.cos(bearing)
+  );
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(angularDist) * Math.cos(lat1),
+      Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2)
+    );
+
+  return [toDeg(lon2), toDeg(lat2)];
 };
 
 const toRoutePoints = (coordinates: OrsCoordinate[]): RoutePoint[] => {
@@ -296,14 +325,17 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     weightings.quiet = 1;
   }
 
-  const createRequestBody = (useAvoidFeatures: string[], seed: number) => {
-    const options: Record<string, unknown> = {
-      round_trip: {
+  const createRequestBody = (useAvoidFeatures: string[], seed: number, endPoint?: [number, number]) => {
+    const options: Record<string, unknown> = {};
+
+    // Only use round_trip for loop mode
+    if (request.routeMode === 'loop') {
+      options.round_trip = {
         length: Math.round(targetDistanceMeters * difficultyFactor),
         points: roundTripPoints,
         seed,
-      },
-    };
+      };
+    }
 
     if (useAvoidFeatures.length > 0) {
       options.avoid_features = useAvoidFeatures;
@@ -313,22 +345,28 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
       options.profile_params = { weightings };
     }
 
+    // For one-way mode, use start + end coordinates; for loop, just start
+    const coordinates =
+      request.routeMode === 'one-way' && endPoint
+        ? [request.startPoint, endPoint]
+        : [request.startPoint];
+
     return {
-      coordinates: [request.startPoint],
-      options,
+      coordinates,
+      ...(Object.keys(options).length > 0 ? { options } : {}),
       elevation: true,
       instructions: false,
     };
   };
 
-  const callOrs = async (seed: number): Promise<OrsRouteFeature> => {
+  const callOrs = async (seed: number, endPoint?: [number, number]): Promise<OrsRouteFeature> => {
     const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
       method: 'POST',
       headers: {
         Authorization: apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(createRequestBody(avoidFeatures, seed)),
+      body: JSON.stringify(createRequestBody(avoidFeatures, seed, endPoint)),
     });
 
     if (!response.ok) {
@@ -342,7 +380,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
             Authorization: apiKey,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(createRequestBody([], seed)),
+          body: JSON.stringify(createRequestBody([], seed, endPoint)),
         });
 
         if (!retryResponse.ok) {
@@ -370,9 +408,21 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
   };
 
   const candidates: Array<{ route: OrsRouteFeature; measuredDistance: number; errorRatio: number }> = [];
+  const straightLineDistance = (targetDistanceMeters * difficultyFactor) / ORS_STRAIGHT_LINE_FACTOR;
+
   for (let i = 0; i < ORS_MAX_CANDIDATE_ATTEMPTS; i += 1) {
-    const seed = (seededValue + i * 137) % 1000;
-    const route = await callOrs(seed);
+    let endPoint: [number, number] | undefined;
+    let seed = 0;
+
+    if (request.routeMode === 'one-way') {
+      // Try different bearings (30° apart) to find a good one-way destination
+      const bearing = (seededValue + i * 30) % 360;
+      endPoint = computeDestination(request.startPoint, bearing, straightLineDistance);
+    } else {
+      seed = (seededValue + i * 137) % 1000;
+    }
+
+    const route = await callOrs(seed, endPoint);
     const measuredDistance = route.properties?.summary?.distance ?? 0;
     if (measuredDistance <= 0) {
       continue;
@@ -395,7 +445,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 
   const route = bestCandidate.route;
 
-  let coordinates = route.geometry.coordinates;
+  let coordinates = route.geometry!.coordinates!;
   if (request.routeMode === 'loop' && coordinates.length > 0) {
     const first = coordinates[0];
     const last = coordinates[coordinates.length - 1];
