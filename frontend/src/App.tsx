@@ -204,20 +204,42 @@ function App() {
           
           {/* Draw Instructions Panel */}
           {drawMode && (
-            <div className="bg-white/90 backdrop-blur-xl shadow-lg shadow-black/10 rounded-2xl p-4 border border-white/50 pointer-events-auto space-y-2">
-              <p className="text-sm font-semibold text-slate-700">Drawing Route</p>
-              <p className="text-xs text-slate-600">Click on the map to add points, close the polygon to finish.</p>
-              <button
-                onClick={() => {
-                  mapViewRef.current?.clearDrawing();
-                  setDrawMode(false);
-                  setPendingDrawnFeature(null);
-                }}
-                className="w-full h-8 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Trash2 className="w-3 h-3" />
-                Clear Drawing
-              </button>
+            <div className="bg-white/90 backdrop-blur-xl shadow-lg shadow-black/10 rounded-2xl p-4 border border-white/50 pointer-events-auto space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Drawing Route</p>
+                <ul className="text-xs text-slate-600 mt-1 list-disc ml-4 space-y-0.5">
+                  <li>Click map to add points.</li>
+                  <li><strong>Double-click</strong> to finish, OR click Finish below.</li>
+                </ul>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    mapViewRef.current?.disableDrawMode();
+                    const feature = mapViewRef.current?.getDrawnFeatures();
+                    if (feature && feature.coordinates.length > 1) {
+                      setPendingDrawnFeature(feature);
+                    } else {
+                      setApiMessage('Please draw at least 2 points.');
+                    }
+                  }}
+                  className="flex-1 h-8 text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-700 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  Finish
+                </button>
+                <button
+                  onClick={() => {
+                    mapViewRef.current?.clearDrawing();
+                    mapViewRef.current?.disableDrawMode();
+                    setDrawMode(false);
+                    setPendingDrawnFeature(null);
+                  }}
+                  className="flex-1 h-8 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
           

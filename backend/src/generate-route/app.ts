@@ -385,8 +385,8 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
   const createRequestBody = (useAvoidFeatures: string[], seed: number, endPoint?: [number, number]) => {
     const options: Record<string, unknown> = {};
 
-    // Only use round_trip for loop mode
-    if (request.routeMode === 'loop') {
+    // Only use round_trip for loop mode when NOT in draw mode
+    if (request.routeMode === 'loop' && !request.drawMode) {
       options.round_trip = {
         length: Math.round(targetDistanceMeters * difficultyFactor),
         points: roundTripPoints,
@@ -402,12 +402,22 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
       options.profile_params = { weightings };
     }
 
-    // For one-way mode, use start + end coordinates; for loop, just start
-    // In draw mode, use the first waypoint as start
-    const coordinates =
-      request.routeMode === 'one-way' && endPoint
-        ? [effectiveStartPoint, endPoint]
-        : [effectiveStartPoint];
+    let coordinates: [number, number][];
+    if (request.drawMode && request.guidingWaypoints && request.guidingWaypoints.length > 1) {
+      coordinates = [...request.guidingWaypoints];
+      if (request.routeMode === 'loop' && coordinates.length > 2) {
+        const first = coordinates[0];
+        const last = coordinates[coordinates.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          coordinates.push([...first]);
+        }
+      }
+    } else {
+      coordinates =
+        request.routeMode === 'one-way' && endPoint
+          ? [effectiveStartPoint, endPoint]
+          : [effectiveStartPoint];
+    }
 
     return {
       coordinates,
@@ -494,7 +504,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     const errorRatio = Math.abs(measuredDistance - targetDistanceMeters) / targetDistanceMeters;
     candidates.push({ route, measuredDistance, errorRatio });
 
-    if (errorRatio <= ORS_DISTANCE_TOLERANCE_RATIO) {
+    if (errorRatio <= ORS_DISTANCE_TOLERANCE_RATIO || request.drawMode) {
       break;
     }
   }
