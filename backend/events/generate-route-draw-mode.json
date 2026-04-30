@@ -1,0 +1,3 @@
+{
+  "body": "{\"routeMode\": \"loop\", \"difficulty\": \"moderate\", \"preferences\": [\"green\", \"quiet\"], \"guidingWaypoints\": [[174.7605, -41.2865], [174.7620, -41.2875], [174.7635, -41.2870], [174.7620, -41.2855]], \"distanceKm\": 5, \"drawMode\": true}"
+}

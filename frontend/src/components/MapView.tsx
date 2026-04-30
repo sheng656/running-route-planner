@@ -1,10 +1,24 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import Map, { Layer, Marker, Source } from 'react-map-gl';
 import type { LineLayer } from 'react-map-gl';
 import type { RoutePoint } from '../data/mockRoute';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 type RouteMode = 'loop' | 'one-way';
+
+export interface DrawnFeature {
+  type: 'LineString' | 'Polygon';
+  coordinates: [number, number][];
+}
+
+export interface MapViewHandle {
+  getDrawnFeatures: () => DrawnFeature | null;
+  clearDrawing: () => void;
+  enableDrawMode: () => void;
+  disableDrawMode: () => void;
+}
 
 interface MapViewProps {
   activePointIndex: number | null;
@@ -12,19 +26,26 @@ interface MapViewProps {
   startPoint: [number, number];
   onStartPointChange: (coords: [number, number]) => void;
   routePoints: RoutePoint[];
+  drawMode?: boolean;
+  onDrawingComplete?: (feature: DrawnFeature) => void;
 }
 
 // A valid Mapbox token is required to render maps.
 // You can grab an access token from https://account.mapbox.com/
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
-export const MapView: React.FC<MapViewProps> = ({
+export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
   activePointIndex,
   routeMode,
   startPoint,
   onStartPointChange,
   routePoints,
-}) => {
+  drawMode = false,
+  onDrawingComplete,
+}, ref) => {
+  const mapRef = useRef(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
+  const mapboxMapRef = useRef<any>(null);
   const [viewState, setViewState] = useState({
     longitude: startPoint[0],
     latitude: startPoint[1],
@@ -34,6 +55,110 @@ export const MapView: React.FC<MapViewProps> = ({
 
   const [routeLine, setRouteLine] = useState<any>(null);
   const [animationProgress, setAnimationProgress] = useState(0);
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    getDrawnFeatures: () => {
+      if (!drawRef.current) return null;
+      const features = drawRef.current.getAll();
+      if (features.features.length === 0) return null;
+      
+      const feature = features.features[0];
+      const coords = feature.geometry.coordinates;
+      
+      return {
+        type: feature.geometry.type as 'LineString' | 'Polygon',
+        coordinates: coords,
+      };
+    },
+    clearDrawing: () => {
+      if (drawRef.current) {
+        drawRef.current.deleteAll();
+      }
+    },
+    enableDrawMode: () => {
+      if (mapboxMapRef.current && drawRef.current) {
+        // Enable all draw tools
+        drawRef.current.changeMode('draw_line_string');
+      }
+    },
+    disableDrawMode: () => {
+      if (drawRef.current) {
+        drawRef.current.changeMode('simple_select');
+      }
+    },
+  }), []);
+
+  // Initialize Draw control
+  useEffect(() => {
+    if (!mapboxMapRef.current) return;
+
+    // Add Draw control
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: true,
+        line_string: true,
+        trash: true,
+      },
+    });
+
+    mapboxMapRef.current.addControl(draw, 'top-right');
+    drawRef.current = draw;
+
+    // Listen to draw events
+    const handleDrawCreate = () => {
+      const features = draw.getAll();
+      if (features.features.length > 0) {
+        const feature = features.features[features.features.length - 1];
+        const drawnFeature: DrawnFeature = {
+          type: feature.geometry.type as 'LineString' | 'Polygon',
+          coordinates: feature.geometry.coordinates,
+        };
+        if (onDrawingComplete) {
+          onDrawingComplete(drawnFeature);
+        }
+      }
+    };
+
+    const handleDrawUpdate = () => {
+      const features = draw.getAll();
+      if (features.features.length > 0) {
+        const feature = features.features[features.features.length - 1];
+        const drawnFeature: DrawnFeature = {
+          type: feature.geometry.type as 'LineString' | 'Polygon',
+          coordinates: feature.geometry.coordinates,
+        };
+        if (onDrawingComplete) {
+          onDrawingComplete(drawnFeature);
+        }
+      }
+    };
+
+    mapboxMapRef.current.on('draw.create', handleDrawCreate);
+    mapboxMapRef.current.on('draw.update', handleDrawUpdate);
+
+    return () => {
+      if (mapboxMapRef.current) {
+        mapboxMapRef.current.off('draw.create', handleDrawCreate);
+        mapboxMapRef.current.off('draw.update', handleDrawUpdate);
+        mapboxMapRef.current.removeControl(draw);
+        drawRef.current = null;
+      }
+    };
+  }, [onDrawingComplete]);
+
+  useEffect(() => {
+    if (!drawRef.current) {
+      return;
+    }
+
+    if (drawMode) {
+      drawRef.current.changeMode('draw_line_string');
+    } else {
+      drawRef.current.changeMode('simple_select');
+    }
+  }, [drawMode]);
 
   const routeCoordinates = useMemo(() => {
     const shifted = routePoints.map((point) => point.coordinates);
@@ -135,8 +260,15 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {hasToken && (
         <Map
+          ref={mapRef}
           {...viewState}
-          onMove={(evt) => setViewState(evt.viewState)}
+          onMove={(evt) => {
+            setViewState(evt.viewState);
+            mapboxMapRef.current = evt.target;
+          }}
+          onLoad={(evt) => {
+            mapboxMapRef.current = evt.target;
+          }}
           mapStyle="mapbox://styles/mapbox/outdoors-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
           attributionControl={false}
@@ -188,4 +320,6 @@ export const MapView: React.FC<MapViewProps> = ({
       )}
     </div>
   );
-};
+});
+
+MapView.displayName = 'MapView';

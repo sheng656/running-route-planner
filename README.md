@@ -32,7 +32,7 @@ Current behavior:
 - GPX/FIT export generation API
 
 ### Backend (Current - AWS SAM MVP)
-- AWS SAM template with API Gateway + 2 Lambda functions
+- AWS SAM template with API Gateway + 3 Lambda functions (Node.js 22.x)
 - Secrets Manager-backed OpenRouteService key loading
 - `POST /routes/generate` for route generation (OpenRouteService)
 - Real elevation sampled from OpenRouteService directions response (`geojson` + `elevation=true`)
@@ -73,6 +73,7 @@ Current behavior:
 - Real Mapbox 2D map rendering
 - Zoom and pan interactions
 - Animated route drawing
+- **Custom Route Drawing**: Users can directly draw paths/polygons on the map to define custom routes
 - Start marker (`S`) and conditional end marker (`E`) for one-way mode
 - Elevation-hover marker sync between chart and map
 - No default Mission Bay demo route shown before generation

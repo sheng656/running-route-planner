@@ -10,6 +10,8 @@ type GenerateRouteRequest = {
   routeMode: RouteMode;
   difficulty: Difficulty;
   preferences: string[];
+  guidingWaypoints?: [number, number][];
+  drawMode?: boolean;
 };
 
 type RoutePoint = {
@@ -70,6 +72,11 @@ const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
 });
 
 const resolveApiKeyFromSecret = async (): Promise<string> => {
+  const directApiKey = process.env.ORS_API_KEY;
+  if (directApiKey) {
+    return directApiKey;
+  }
+
   const secretId = process.env.ORS_SECRET_ID;
   if (!secretId) {
     throw new Error('ORS_SECRET_ID is not configured');
@@ -116,6 +123,38 @@ const parseRequestBody = (event: APIGatewayProxyEvent): GenerateRouteRequest | n
 
   try {
     const parsed = JSON.parse(event.body) as Partial<GenerateRouteRequest>;
+    
+    // Handle draw mode with guidingWaypoints
+    if (parsed.drawMode && parsed.guidingWaypoints && Array.isArray(parsed.guidingWaypoints)) {
+      if (
+        parsed.guidingWaypoints.length < 2 ||
+        !parsed.guidingWaypoints.every(
+          (wp) =>
+            Array.isArray(wp) &&
+            wp.length === 2 &&
+            typeof wp[0] === 'number' &&
+            typeof wp[1] === 'number'
+        ) ||
+        typeof parsed.distanceKm !== 'number' ||
+        (parsed.routeMode !== 'loop' && parsed.routeMode !== 'one-way') ||
+        (parsed.difficulty !== 'easy' && parsed.difficulty !== 'moderate' && parsed.difficulty !== 'hard') ||
+        !Array.isArray(parsed.preferences)
+      ) {
+        return null;
+      }
+
+      return {
+        startPoint: parsed.guidingWaypoints[0],
+        distanceKm: parsed.distanceKm,
+        routeMode: parsed.routeMode,
+        difficulty: parsed.difficulty,
+        preferences: parsed.preferences,
+        guidingWaypoints: parsed.guidingWaypoints,
+        drawMode: true,
+      };
+    }
+
+    // Standard mode (without draw)
     if (
       !parsed.startPoint ||
       parsed.startPoint.length !== 2 ||
@@ -295,7 +334,25 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
   const apiKey = await resolveApiKeyFromSecret();
 
   const difficultyFactor = asDifficultyFactor(request.difficulty);
-  const targetDistanceMeters = request.distanceKm * 1000;
+  let targetDistanceMeters = request.distanceKm * 1000;
+  
+  // For draw mode, calculate the perimeter of the drawing based on waypoints
+  let effectiveStartPoint = request.startPoint;
+  if (request.drawMode && request.guidingWaypoints) {
+    effectiveStartPoint = request.guidingWaypoints[0];
+    
+    // Calculate perimeter for draw mode
+    if (request.routeMode === 'loop' && request.guidingWaypoints.length > 2) {
+      let perimeter = 0;
+      for (let i = 0; i < request.guidingWaypoints.length; i++) {
+        const current = request.guidingWaypoints[i];
+        const next = request.guidingWaypoints[(i + 1) % request.guidingWaypoints.length];
+        perimeter += distanceBetweenMeters(current, next);
+      }
+      // Use the calculated perimeter as the target distance for loop mode
+      targetDistanceMeters = Math.max(perimeter, 500); // Ensure minimum 500m
+    }
+  }
 
   const normalizedPreferences = [...request.preferences].sort();
   const preferenceSignature = normalizedPreferences.join('|');
@@ -304,7 +361,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 
   const randomSalt = Math.floor(Math.random() * 100000);
   const seededValue = hashSeed(
-    `${request.startPoint[0].toFixed(5)}:${request.startPoint[1].toFixed(5)}:${request.distanceKm.toFixed(2)}:${request.routeMode}:${request.difficulty}:${preferenceSignature}:${randomSalt}`
+    `${effectiveStartPoint[0].toFixed(5)}:${effectiveStartPoint[1].toFixed(5)}:${targetDistanceMeters.toFixed(2)}:${request.routeMode}:${request.difficulty}:${preferenceSignature}:${randomSalt}`
   );
 
   // Build avoid_features from preferences
@@ -346,10 +403,11 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     }
 
     // For one-way mode, use start + end coordinates; for loop, just start
+    // In draw mode, use the first waypoint as start
     const coordinates =
       request.routeMode === 'one-way' && endPoint
-        ? [request.startPoint, endPoint]
-        : [request.startPoint];
+        ? [effectiveStartPoint, endPoint]
+        : [effectiveStartPoint];
 
     return {
       coordinates,
@@ -415,9 +473,14 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
     let seed = 0;
 
     if (request.routeMode === 'one-way') {
-      // Try different bearings (30° apart) to find a good one-way destination
-      const bearing = (seededValue + i * 30) % 360;
-      endPoint = computeDestination(request.startPoint, bearing, straightLineDistance);
+      // For draw mode with one-way, use the last waypoint as end point
+      if (request.drawMode && request.guidingWaypoints && request.guidingWaypoints.length > 1) {
+        endPoint = request.guidingWaypoints[request.guidingWaypoints.length - 1];
+      } else {
+        // Try different bearings (30° apart) to find a good one-way destination
+        const bearing = (seededValue + i * 30) % 360;
+        endPoint = computeDestination(effectiveStartPoint, bearing, straightLineDistance);
+      }
     } else {
       seed = (seededValue + i * 137) % 1000;
     }

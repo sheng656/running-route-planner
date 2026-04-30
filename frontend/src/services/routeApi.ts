@@ -9,6 +9,8 @@ export type GenerateRoutePayload = {
   routeMode: RouteMode;
   difficulty: Difficulty;
   preferences: string[];
+  guidingWaypoints?: [number, number][];
+  drawMode?: boolean;
 };
 
 export type GeneratedRoute = {
