@@ -421,6 +421,7 @@ const fetchFromOpenRouteService = async (request: GenerateRouteRequest): Promise
 
     return {
       coordinates,
+      radiuses: coordinates.map(() => 2000),
       ...(Object.keys(options).length > 0 ? { options } : {}),
       elevation: true,
       instructions: false,
