@@ -1,170 +1,114 @@
-# Running Route Planner
+# 🏃‍♂️ Running Route Planner
 
-An interactive running route planning project designed for portfolio demonstration.
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+[![Mapbox](https://img.shields.io/badge/Mapbox-000000?style=for-the-badge&logo=mapbox&logoColor=white)](https://www.mapbox.com/)
 
-The app focuses on:
-- route configuration UX
-- map-first visualization
-- Garmin-friendly export workflow
-- low-cost deployment using Vercel + AWS free tier
+An intelligent, interactive running route planning application designed for runners who want seamless route discovery and Garmin-ready exports. Built with a focus on modern UX, serverless architecture, and real-world utility.
 
-## Current Status
+---
 
-Frontend and backend MVP are both implemented.
+## ✨ Key Features
 
-Current behavior:
-- no default mock route is rendered on app load
-- route/elevation are generated from backend APIs
-- GPX export is available after route generation
+### 🛠️ Intelligent Route Configuration
+- **Distance-Based Generation**: Choose your target distance (from 1km to a full marathon) and let the engine find the best loop or one-way path.
+- **Scenery & Terrain Preferences**: 
+  - 🌿 **Parks & Greenery**: Prioritize scenic, nature-filled paths.
+  - 🤫 **Quiet Streets**: Avoid heavy traffic and noise.
+  - 🚫 **No Stairs**: Ensure a smooth, step-free run.
+- **Difficulty Awareness**: Select between Easy (Flat), Moderate (Rolling Hills), or Hard (Steep Climbs) to influence the elevation profile.
 
-## Tech Stack
+### 🎨 Interactive Route Drawing
+- **Free-hand Drawing**: Don't want an AI-generated route? Draw your own path directly on the map.
+- **Intelligent Snapping**: Your hand-drawn lines automatically snap to the nearest walkable roads and trails using OpenRouteService.
+- **Perimeter Detection**: The app intelligently detects if your drawing is a loop or a one-way trip.
 
-### Frontend (Implemented)
-- React + TypeScript + Vite
-- Tailwind CSS
-- Mapbox GL via `react-map-gl`
-- Recharts for elevation profile
+### 📊 Performance Insights
+- **Live Elevation Profile**: Visualize the climbs and descents of your route with an interactive chart.
+- **Map-Sync Hover**: Hover over the elevation chart to see the exact location on the map.
+- **Scenic Badges**: Get a quick summary of your route's characteristics and estimated duration.
 
-### Backend (Planned)
-- AWS Lambda
-- API Gateway
-- Route data integrations (OpenRouteService / Overpass)
-- GPX/FIT export generation API
+### 📲 Garmin-Ready Export
+- **GPX 1.1 Support**: Export your routes with high-precision trackpoints and elevation data.
+- **Seamless Import**: Optimized for Garmin Connect and other major fitness platforms.
 
-### Backend (Current - AWS SAM MVP)
-- AWS SAM template with API Gateway + 3 Lambda functions (Node.js 22.x)
-- Secrets Manager-backed OpenRouteService key loading
-- `POST /routes/generate` for route generation (OpenRouteService)
-- Real elevation sampled from OpenRouteService directions response (`geojson` + `elevation=true`)
-- `POST /routes/export/gpx` for GPX file export
-- Garmin-friendly GPX 1.1 track output
-- `GET /health` for health checks
+---
 
-## Repository Structure
+## 🚀 Tech Stack
 
-```
+### Frontend
+- **Framework**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS (with Glassmorphism & Dark Mode)
+- **Maps**: Mapbox GL JS via `react-map-gl` & `@mapbox/mapbox-gl-draw`
+- **Charts**: Recharts for elevation visualization
+- **Icons**: Lucide React
+
+### Backend (Serverless)
+- **Infrastructure**: AWS SAM (Serverless Application Model)
+- **Runtime**: Node.js 22.x (Lambda)
+- **API**: Amazon API Gateway
+- **Routing Engine**: OpenRouteService API
+- **Secrets**: AWS Secrets Manager for secure API key handling
+
+---
+
+## 📂 Repository Structure
+
+```text
 .
-├── frontend/               # Frontend app (React/Vite)
-├── backend/                # AWS SAM backend (Lambda + API Gateway)
-├── README.md               # Project documentation
-└── LICENSE
+├── frontend/               # React + Vite application
+│   ├── src/components/     # UI components (Map, Configurator, Charts)
+│   ├── src/services/       # API integration logic
+│   └── src/utils/          # Route calculation & formatting helpers
+├── backend/                # AWS SAM Backend
+│   ├── src/generate-route/ # Route generation Lambda (ORS integration)
+│   ├── src/export-gpx/     # GPX transformation & export Lambda
+│   └── template.yaml       # AWS CloudFormation/SAM infrastructure
+└── README.md               # You are here
 ```
 
-## Implemented Features
+---
 
-### Route Configuration Panel
-- Distance slider with quick presets: `3k`, `5k`, `10k`, `Half`, `Full`
-- Difficulty selector: easy / moderate / hard
-- Scenery preference toggles: coastal, park, flat, trails
-- Scenery preferences are sent to backend and influence round-trip shape/seed and route naming
-- Route type selector:
-  - `Loop / Return` (default, start=end)
-  - `One-way`
+## 🛠️ Local Development
 
-### Location Behavior
-- On load, app requests browser location permission
-- If permission is granted:
-  - default start location = current user location
-- If permission is denied/unavailable:
-  - default start location = Mission Bay, Auckland
-- Start pin can be dragged directly on the map to choose a custom start location
+### 1. Prerequisites
+- Node.js (v20+)
+- AWS CLI & SAM CLI (for backend)
+- Mapbox Public Token
 
-### Map Experience
-- Real Mapbox 2D map rendering
-- Zoom and pan interactions
-- Animated route drawing
-- **Custom Route Drawing**: Users can directly draw paths/polygons on the map to define custom routes
-- Start marker (`S`) and conditional end marker (`E`) for one-way mode
-- Elevation-hover marker sync between chart and map
-- No default Mission Bay demo route shown before generation
-
-### Elevation + Insights UI
-- Elevation profile chart sourced from OpenRouteService elevation data
-- Route summary panel (distance, time range, ascent, scenic badge)
-- Scenic summary text generated from backend (English)
-
-### GPX Export
-- Export route as GPX 1.1 track (`.gpx`) after generation
-- Includes trackpoint coordinates and elevation (`<ele>`) values
-- Output is formatted for Garmin Connect import workflow
-
-### Environment Variable Support
-- Mapbox token is loaded from environment variable:
-  - `VITE_MAPBOX_TOKEN`
-- Files:
-  - `frontend/.env`
-  - `frontend/.env.example`
-
-## Planned Features
-
-### Routing Intelligence
-- Generate real routes from user preferences and distance constraints
-- Prefer coastline/park segments using OSM metadata
-- Slope-aware route scoring
-
-### Export & Device Workflow
-- GPX export for Garmin import (implemented)
-- Optional FIT export support
-- In-app Garmin import guide UX
-
-### AWS Backend
-- Serverless route generation endpoints (Lambda)
-- API Gateway routing and throttling
-- Caching strategy for free-tier optimization
-- Basic observability/logging setup
-
-### Portfolio Enhancements
-- Better empty/loading/error states
-- More polished mobile interactions
-- Route save/share links
-
-## Local Development
-
-### 1. Install dependencies
-
+### 2. Frontend Setup
 ```bash
 cd frontend
 npm install
-```
 
-### 2. Configure Mapbox token
+# Create .env file
+echo "VITE_MAPBOX_TOKEN=your_token_here" > .env
 
-Create `frontend/.env`:
-
-```bash
-VITE_MAPBOX_TOKEN=your_mapbox_public_token
-```
-
-Recommended token restriction setup in Mapbox:
-- `http://localhost:*`
-- `http://127.0.0.1:*`
-- `https://*.vercel.app`
-
-### 3. Run dev server
-
-```bash
-cd frontend
 npm run dev
 ```
 
-### 4. Production build
-
-```bash
-cd frontend
-npm run build
-```
-
-### 5. Backend local build
-
+### 3. Backend Setup
 ```bash
 cd backend
 npm install
-sam build --template-file template.yaml
+
+# Build the SAM application
+sam build
+
+# Local invocation (optional)
+sam local invoke GenerateRouteFunction --event events/generate-route.json
 ```
 
-## Deployment Plan
+---
 
-- Frontend: Vercel
-- Backend: AWS (Lambda + API Gateway)
-- Goal: keep usage inside free-tier limits
+## 🌐 Deployment
 
+- **Frontend**: Deployed to **Vercel** for optimal performance and global edge delivery.
+- **Backend**: Deployed to **AWS** (Lambda + API Gateway), operating within the AWS Free Tier.
+
+---
+
+## 📝 License
+
+This project is licensed under the [MIT License](LICENSE).
