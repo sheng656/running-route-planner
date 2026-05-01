@@ -125,18 +125,19 @@ function App() {
   const handleConfirmGenerate = () => {
     if (!confirmDialog.payload) return;
 
+    // Clear pending feature FIRST to prevent RouteConfigurator useEffect
+    // from re-triggering onRequestConfirm and reopening the dialog
+    setPendingDrawnFeature(null);
+    setDrawMode(false);
+    mapViewRef.current?.clearDrawing();
+    setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
+
     handleGenerateRoute({
       difficulty: confirmDialog.difficulty,
       preferences: confirmDialog.preferences,
       guidingWaypoints: confirmDialog.payload.waypoints,
       drawMode: true,
     });
-
-    // Reset all draw state
-    setDrawMode(false);
-    setPendingDrawnFeature(null);
-    mapViewRef.current?.clearDrawing();
-    setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
   };
 
   const handleRedraw = () => {
@@ -211,7 +212,7 @@ function App() {
            </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 flex flex-col">
           <RouteConfigurator
             routeMode={routeMode}
             onRouteModeChange={setRouteMode}

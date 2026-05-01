@@ -114,20 +114,22 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-full gap-4 p-4 lg:p-5 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-      <div>
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+      {/* Title — hidden on mobile to save space */}
+      <div className="hidden md:block px-5 pt-5 pb-2 flex-shrink-0">
         <h1 className="text-xl font-bold tracking-tight mb-0.5 flex items-center gap-2">
           <Navigation className="w-5 h-5 text-blue-600" />
           Route Configurator
         </h1>
         <p className="text-xs text-slate-500">
           {drawMode || configMode === 'draw-mode'
-            ? 'Draw a line or circle on the map' 
+            ? 'Draw a line or circle on the map'
             : 'Fine-tune your next run seamlessly.'}
         </p>
       </div>
 
-      <div className="space-y-4 flex-1">
+      {/* Scrollable config area */}
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-4 px-4 md:px-5 py-4">
         {/* Route Mode */}
         <div className="space-y-1.5">
           <Label className="text-sm font-semibold">Route Type</Label>
@@ -255,8 +257,8 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className={`pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 ${configMode === 'draw-mode' ? 'hidden' : ''}`}>
+      {/* Action Buttons — flex-shrink-0 so always visible without scrolling */}
+      <div className={`flex-shrink-0 px-4 md:px-5 py-3 border-t border-slate-200 dark:border-slate-800 space-y-2 ${configMode === 'draw-mode' ? 'hidden' : ''}`}>
         {!(drawMode || configMode === 'draw-mode') && (
           <>
             <Button
