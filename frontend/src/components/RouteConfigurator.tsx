@@ -58,7 +58,6 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   drawMode,
   onDrawModeChange,
   pendingDrawnFeature,
-  onClearPendingDrawnFeature,
   onRequestConfirm,
 }) => {
   const [distance, setDistance] = useState<number[]>([5]);

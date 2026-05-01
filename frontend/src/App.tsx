@@ -432,7 +432,7 @@ function App() {
               <Label className="text-sm font-semibold">Difficulty</Label>
               <Select
                 value={confirmDialog.difficulty}
-                onValueChange={(v) => setConfirmDialog(prev => ({ ...prev, difficulty: v as 'easy' | 'moderate' | 'hard' }))}
+                onValueChange={(v: string) => setConfirmDialog(prev => ({ ...prev, difficulty: v as 'easy' | 'moderate' | 'hard' }))}
               >
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue />
