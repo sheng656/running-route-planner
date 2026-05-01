@@ -116,12 +116,12 @@ export function detectRouteMode(
   const start = coordinates[0];
   const end = coordinates[coordinates.length - 1];
 
-  // Check if start and end points are very close (within ~0.0001° ≈ 10m at equator)
+  // Check if start and end points are very close (within ~0.002° ≈ 220m at equator)
   const distance = Math.sqrt(
     Math.pow(start[0] - end[0], 2) + Math.pow(start[1] - end[1], 2)
   );
 
-  return distance < 0.0001 ? 'loop' : 'one-way';
+  return distance < 0.002 ? 'loop' : 'one-way';
 }
 
 /**
@@ -143,7 +143,7 @@ export function calculateRouteLength(coordinates: [number, number][]): number {
     const distance = Math.sqrt(
       Math.pow(start[0] - end[0], 2) + Math.pow(start[1] - end[1], 2)
     );
-    if (distance < 0.0001) {
+    if (distance < 0.002) {
       totalDistance += haversineDistance(end, start);
     }
   }

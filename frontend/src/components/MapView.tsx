@@ -62,13 +62,15 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
       if (!drawRef.current) return null;
       const features = drawRef.current.getAll();
       if (features.features.length === 0) return null;
-      
+
       const feature = features.features[0];
-      const coords = feature.geometry.coordinates;
-      
+
+      // Only LineString is supported; Polygon has nested coords and would crash routeUtils
+      if (feature.geometry.type !== 'LineString') return null;
+
       return {
-        type: feature.geometry.type as 'LineString' | 'Polygon',
-        coordinates: coords,
+        type: 'LineString' as const,
+        coordinates: feature.geometry.coordinates as [number, number][],
       };
     },
     clearDrawing: () => {
@@ -97,7 +99,6 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
     const draw = new MapboxDraw({
       displayControlsDefault: false,
       controls: {
-        polygon: true,
         line_string: true,
         trash: true,
       },
