@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { RouteConfigurator } from './components/RouteConfigurator';
 import { MapView } from './components/MapView';
 import type { DrawnFeature, MapViewHandle } from './components/MapView';
+import type { ConfirmDrawingPayload } from './components/RouteConfigurator';
 import { ElevationChart } from './components/ElevationChart';
 import { AreaChart, TrendingUp, Map as MapIcon, Star, Settings2, X, Trash2 } from 'lucide-react';
 import { MISSION_BAY_COORDINATES, type RoutePoint } from './data/mockRoute';
 import { exportRouteToGpx, generateRoute } from './services/routeApi';
+import { Button } from './components/ui/button';
+import { Label } from './components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
+import { formatDistance } from './utils/routeUtils';
 
 type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
@@ -17,6 +22,13 @@ type RouteStats = {
   maxElevation: number;
   totalAscent: number;
   scenicRating: number;
+};
+
+type ConfirmDialogState = {
+  isOpen: boolean;
+  payload: ConfirmDrawingPayload | null;
+  difficulty: 'easy' | 'moderate' | 'hard';
+  preferences: string[];
 };
 
 function App() {
@@ -32,6 +44,12 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    isOpen: false,
+    payload: null,
+    difficulty: 'moderate',
+    preferences: ['green'],
+  });
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -95,6 +113,55 @@ function App() {
     }
   };
 
+  const handleRequestConfirm = (payload: ConfirmDrawingPayload) => {
+    setConfirmDialog({
+      isOpen: true,
+      payload,
+      difficulty: 'moderate',
+      preferences: ['green'],
+    });
+  };
+
+  const handleConfirmGenerate = () => {
+    if (!confirmDialog.payload) return;
+
+    handleGenerateRoute({
+      difficulty: confirmDialog.difficulty,
+      preferences: confirmDialog.preferences,
+      guidingWaypoints: confirmDialog.payload.waypoints,
+      drawMode: true,
+    });
+
+    // Reset all draw state
+    setDrawMode(false);
+    setPendingDrawnFeature(null);
+    mapViewRef.current?.clearDrawing();
+    setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
+  };
+
+  const handleRedraw = () => {
+    // Close dialog, keep drawMode active so user can redraw
+    setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
+    setPendingDrawnFeature(null);
+    mapViewRef.current?.clearDrawing();
+    mapViewRef.current?.enableDrawMode();
+  };
+
+  const toggleConfirmPreference = (pref: string) => {
+    setConfirmDialog(prev => ({
+      ...prev,
+      preferences: prev.preferences.includes(pref)
+        ? prev.preferences.filter(p => p !== pref)
+        : [...prev.preferences, pref],
+    }));
+  };
+
+  const prefOptions = [
+    { id: 'green', label: '🌿 Parks & Greenery' },
+    { id: 'quiet', label: '🤫 Quiet Streets' },
+    { id: 'avoid_steps', label: '🚫 No Stairs' },
+  ];
+
   const handleExportGpx = async () => {
     if (!routeStats || routePoints.length < 2) {
       setApiMessage('Generate a route first before exporting GPX.');
@@ -152,6 +219,7 @@ function App() {
             onDrawModeChange={setDrawMode}
             pendingDrawnFeature={pendingDrawnFeature}
             onClearPendingDrawnFeature={() => setPendingDrawnFeature(null)}
+            onRequestConfirm={handleRequestConfirm}
             locationSource={locationSource}
             startPoint={startPoint}
             canExportGpx={routePoints.length > 1 && !!routeStats}
@@ -199,47 +267,85 @@ function App() {
           {apiMessage && <p className="mt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-md border border-slate-100">{apiMessage}</p>}
         </div>
 
+        {/* Mobile: Draw mode compact top banner — direct child of main so absolute positioning works */}
+        {drawMode && (
+          <div className="md:hidden absolute top-4 left-4 right-4 z-20 bg-emerald-600/95 backdrop-blur-md rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 shadow-lg shadow-emerald-900/20 pointer-events-auto">
+            <p className="text-xs font-medium text-white flex-1 min-w-0">
+              ✏️ Tap map to add points · Double-tap to finish
+            </p>
+            <div className="flex gap-1.5 shrink-0">
+              <button
+                onClick={() => {
+                  mapViewRef.current?.disableDrawMode();
+                  const feature = mapViewRef.current?.getDrawnFeatures();
+                  if (feature && feature.coordinates.length > 1) {
+                    setPendingDrawnFeature(feature);
+                  } else {
+                    setApiMessage('Please draw at least 2 points.');
+                  }
+                }}
+                className="px-3 py-1 text-xs font-semibold bg-white text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors"
+              >
+                Finish
+              </button>
+              <button
+                onClick={() => {
+                  mapViewRef.current?.clearDrawing();
+                  mapViewRef.current?.disableDrawMode();
+                  setDrawMode(false);
+                  setPendingDrawnFeature(null);
+                }}
+                className="px-2 py-1 text-xs font-semibold bg-emerald-700/60 text-white rounded-lg hover:bg-emerald-800/80 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Floating Bottom Elements */}
         <div className="absolute bottom-6 left-4 right-4 z-10 flex flex-col gap-3 pointer-events-none md:left-auto md:w-[450px]">
           
-          {/* Draw Instructions Panel */}
+          {/* Desktop: Draw Instructions bottom floating panel */}
           {drawMode && (
-            <div className="bg-white/90 backdrop-blur-xl shadow-lg shadow-black/10 rounded-2xl p-4 border border-white/50 pointer-events-auto space-y-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">Drawing Route</p>
-                <ul className="text-xs text-slate-600 mt-1 list-disc ml-4 space-y-0.5">
-                  <li>Click map to add points.</li>
-                  <li><strong>Double-click</strong> to finish, OR click Finish below.</li>
-                </ul>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    mapViewRef.current?.disableDrawMode();
-                    const feature = mapViewRef.current?.getDrawnFeatures();
-                    if (feature && feature.coordinates.length > 1) {
-                      setPendingDrawnFeature(feature);
-                    } else {
-                      setApiMessage('Please draw at least 2 points.');
-                    }
-                  }}
-                  className="flex-1 h-8 text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-700 rounded-lg transition-colors flex items-center justify-center"
-                >
-                  Finish
-                </button>
-                <button
-                  onClick={() => {
-                    mapViewRef.current?.clearDrawing();
-                    mapViewRef.current?.disableDrawMode();
-                    setDrawMode(false);
-                    setPendingDrawnFeature(null);
-                  }}
-                  className="flex-1 h-8 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Cancel
-                </button>
-              </div>
+            <div className="hidden md:block">
+                <div className="bg-white/90 backdrop-blur-xl shadow-lg shadow-black/10 rounded-2xl p-4 border border-white/50 pointer-events-auto space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">Drawing Route</p>
+                    <ul className="text-xs text-slate-600 mt-1 list-disc ml-4 space-y-0.5">
+                      <li>Click map to add points.</li>
+                      <li><strong>Double-click</strong> to finish, OR click Finish below.</li>
+                    </ul>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        mapViewRef.current?.disableDrawMode();
+                        const feature = mapViewRef.current?.getDrawnFeatures();
+                        if (feature && feature.coordinates.length > 1) {
+                          setPendingDrawnFeature(feature);
+                        } else {
+                          setApiMessage('Please draw at least 2 points.');
+                        }
+                      }}
+                      className="flex-1 h-8 text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-700 rounded-lg transition-colors flex items-center justify-center"
+                    >
+                      Finish
+                    </button>
+                    <button
+                      onClick={() => {
+                        mapViewRef.current?.clearDrawing();
+                        mapViewRef.current?.disableDrawMode();
+                        setDrawMode(false);
+                        setPendingDrawnFeature(null);
+                      }}
+                      className="flex-1 h-8 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
             </div>
           )}
           
@@ -290,6 +396,90 @@ function App() {
 
         </div>
       </main>
+
+      {/* ── Confirm Drawing Modal (rendered at top level, outside <aside> transform) ── */}
+      {confirmDialog.isOpen && confirmDialog.payload && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm space-y-4 p-5 overflow-y-auto max-h-[90dvh]">
+            {/* Header */}
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Confirm Drawing</h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                We detected a {confirmDialog.payload.detectedMode === 'loop' ? 'loop' : 'one-way'} route
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="bg-slate-50 rounded-xl p-3 space-y-2 text-sm border border-slate-100">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Route Type</span>
+                <span className="font-semibold">
+                  {confirmDialog.payload.detectedMode === 'loop' ? '🔄 Loop' : '➡️ One-way'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Points</span>
+                <span className="font-semibold">{confirmDialog.payload.feature.coordinates.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Est. Distance</span>
+                <span className="font-semibold">{formatDistance(confirmDialog.payload.estimatedDistance)}</span>
+              </div>
+            </div>
+
+            {/* Difficulty */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold">Difficulty</Label>
+              <Select
+                value={confirmDialog.difficulty}
+                onValueChange={(v) => setConfirmDialog(prev => ({ ...prev, difficulty: v as 'easy' | 'moderate' | 'hard' }))}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy (Flat)</SelectItem>
+                  <SelectItem value="moderate">Moderate (Rolling Hills)</SelectItem>
+                  <SelectItem value="hard">Hard (Steep Climbs)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Preferences */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold">Preferences</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {prefOptions.map(opt => {
+                  const isActive = confirmDialog.preferences.includes(opt.id);
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => toggleConfirmPreference(opt.id)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border ${
+                        isActive
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1 h-10" onClick={handleRedraw}>
+                Redraw
+              </Button>
+              <Button className="flex-1 h-10" onClick={handleConfirmGenerate} disabled={isGenerating}>
+                {isGenerating ? 'Generating...' : 'Generate Route'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

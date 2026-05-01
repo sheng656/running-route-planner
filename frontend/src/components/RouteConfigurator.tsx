@@ -9,19 +9,17 @@ import {
   detectRouteMode, 
   calculateRouteLength, 
   extractWaypoints,
-  formatDistance 
 } from '../utils/routeUtils';
 
 type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
 type ConfigMode = 'default' | 'draw-mode';
 
-interface ConfirmDialogState {
-  isOpen: boolean;
-  feature: DrawnFeature | null;
-  detectedMode: RouteMode | null;
+export interface ConfirmDrawingPayload {
+  feature: DrawnFeature;
+  detectedMode: RouteMode;
   estimatedDistance: number;
-  waypoints: [number, number][] | null;
+  waypoints: [number, number][];
 }
 
 interface RouteConfiguratorProps {
@@ -31,6 +29,7 @@ interface RouteConfiguratorProps {
   onDrawModeChange: (enabled: boolean) => void;
   pendingDrawnFeature: DrawnFeature | null;
   onClearPendingDrawnFeature: () => void;
+  onRequestConfirm: (payload: ConfirmDrawingPayload) => void;
   locationSource: LocationSource;
   startPoint: [number, number];
   canExportGpx: boolean;
@@ -60,21 +59,13 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
   onDrawModeChange,
   pendingDrawnFeature,
   onClearPendingDrawnFeature,
+  onRequestConfirm,
 }) => {
   const [distance, setDistance] = useState<number[]>([5]);
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'hard'>('moderate');
   const [preferences, setPreferences] = useState<string[]>(["green"]);
   
   const [configMode, setConfigMode] = useState<ConfigMode>('default');
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
-    isOpen: false,
-    feature: null,
-    detectedMode: null,
-    estimatedDistance: 0,
-    waypoints: null,
-  });
-  const [confirmDifficulty, setConfirmDifficulty] = useState<'easy' | 'moderate' | 'hard'>('moderate');
-  const [confirmPreferences, setConfirmPreferences] = useState<string[]>(["green"]);
 
   useEffect(() => {
     if (!pendingDrawnFeature) {
@@ -85,30 +76,20 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
     const estimatedDistance = calculateRouteLength(pendingDrawnFeature.coordinates);
     const waypoints = extractWaypoints(pendingDrawnFeature.coordinates, 50);
 
-    setConfirmDialog({
-      isOpen: true,
+    if (detectedMode !== routeMode) {
+      onRouteModeChange(detectedMode);
+    }
+
+    onRequestConfirm({
       feature: pendingDrawnFeature,
       detectedMode,
       estimatedDistance,
       waypoints,
     });
-
-    if (detectedMode !== routeMode) {
-      onRouteModeChange(detectedMode);
-    }
-
-    setConfirmDifficulty('moderate');
-    setConfirmPreferences(["green"]);
-  }, [pendingDrawnFeature, onRouteModeChange, routeMode]);
+  }, [pendingDrawnFeature, onRouteModeChange, routeMode, onRequestConfirm]);
 
   const togglePreference = (pref: string) => {
     setPreferences(prev => 
-      prev.includes(pref) ? prev.filter(p => p !== pref) : [...prev, pref]
-    );
-  };
-
-  const toggleConfirmPreference = (pref: string) => {
-    setConfirmPreferences(prev => 
       prev.includes(pref) ? prev.filter(p => p !== pref) : [...prev, pref]
     );
   };
@@ -119,28 +100,13 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
     mapViewRef.current?.enableDrawMode();
   };
 
-  const handleConfirmGenerate = () => {
-    if (!confirmDialog.waypoints) return;
-    
-    onGenerateRoute({
-      difficulty: confirmDifficulty,
-      preferences: confirmPreferences,
-      guidingWaypoints: confirmDialog.waypoints,
-      drawMode: true,
-    });
-    
-    // Reset draw mode after generation
-    setConfigMode('default');
-    onDrawModeChange(false);
-    onClearPendingDrawnFeature();
-    setConfirmDialog({
-      isOpen: false,
-      feature: null,
-      detectedMode: null,
-      estimatedDistance: 0,
-      waypoints: null,
-    });
-  };
+  // Called by App when drawing is confirmed & generated successfully
+  // Reset local draw-mode state
+  useEffect(() => {
+    if (!pendingDrawnFeature && configMode === 'draw-mode') {
+      setConfigMode('default');
+    }
+  }, [pendingDrawnFeature, configMode]);
 
   const prefOptions = [
     { id: 'green', label: '🌿 Parks & Greenery' },
@@ -330,91 +296,6 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
         </Button>
       </div>
 
-      {/* Confirmation Dialog for Drawing */}
-      {confirmDialog.isOpen && confirmDialog.feature && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4 space-y-4">
-            <div>
-              <h2 className="text-lg font-bold">Confirm Drawing</h2>
-              <p className="text-sm text-slate-600 mt-1">
-                We detected a {confirmDialog.detectedMode === 'loop' ? 'loop' : 'one-way'} route
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded p-3 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-600">Route Type:</span>
-                <span className="font-medium">
-                  {confirmDialog.detectedMode === 'loop' ? '🔄 Loop' : '➡️ One-way'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Points Detected:</span>
-                <span className="font-medium">{confirmDialog.feature.coordinates.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Estimated Distance:</span>
-                <span className="font-medium">{formatDistance(confirmDialog.estimatedDistance)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold">Difficulty</Label>
-                <Select value={confirmDifficulty} onValueChange={setConfirmDifficulty}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">Easy (Flat)</SelectItem>
-                    <SelectItem value="moderate">Moderate (Rolling Hills)</SelectItem>
-                    <SelectItem value="hard">Hard (Steep Climbs)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-sm font-semibold">Preferences</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {prefOptions.map(opt => {
-                    const isActive = confirmPreferences.includes(opt.id);
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => toggleConfirmPreference(opt.id)}
-                        className={`px-2 py-1 text-xs font-medium rounded-full transition-all border ${
-                          isActive 
-                            ? 'bg-blue-600 text-white border-blue-600' 
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                className="flex-1 h-9"
-                onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
-              >
-                Redraw
-              </Button>
-              <Button
-                className="flex-1 h-9"
-                onClick={handleConfirmGenerate}
-                disabled={isGenerating}
-              >
-                {isGenerating ? 'Generating...' : 'Generate'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
