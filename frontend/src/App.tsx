@@ -4,7 +4,7 @@ import { MapView } from './components/MapView';
 import type { DrawnFeature, MapViewHandle } from './components/MapView';
 import type { ConfirmDrawingPayload } from './components/RouteConfigurator';
 import { ElevationChart } from './components/ElevationChart';
-import { AreaChart, TrendingUp, Map as MapIcon, Star, Settings2, X, Trash2 } from 'lucide-react';
+import { AreaChart, TrendingUp, Map as MapIcon, Star, Settings2, X, Trash2, Download } from 'lucide-react';
 import { MISSION_BAY_COORDINATES, type RoutePoint } from './data/mockRoute';
 import { exportRouteToGpx, generateRoute } from './services/routeApi';
 import { Button } from './components/ui/button';
@@ -377,24 +377,32 @@ function App() {
             )}
           </div>
 
-          {/* Mobile "Open Settings" Button (visible when closed) */}
+          {/* Mobile "Open Settings" + GPX export buttons (visible when panel is closed) */}
           <div className="md:hidden flex flex-col items-center gap-2 pointer-events-auto">
              {!routeStats && !isMobileSettingsOpen && (
                <p className="text-xs text-slate-500 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/40 shadow-sm">
                  📍 Drag the pin to set your start point
                </p>
              )}
-             <button 
-               onClick={() => setIsMobileSettingsOpen(true)}
-               className={`
-                 flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg shadow-blue-600/30
-                 transition-all duration-300 transform border border-blue-500
-                 ${isMobileSettingsOpen ? 'scale-0 opacity-0 translate-y-10' : 'scale-100 opacity-100 translate-y-0'}
-               `}
-             >
-               <Settings2 className="w-5 h-5" />
-               Configure Route
-             </button>
+             <div className={`flex items-center gap-2 transition-all duration-300 ${isMobileSettingsOpen ? 'scale-0 opacity-0 translate-y-10' : 'scale-100 opacity-100 translate-y-0'}`}>
+               <button
+                 onClick={() => setIsMobileSettingsOpen(true)}
+                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg shadow-blue-600/30 border border-blue-500 transition-colors active:bg-blue-700"
+               >
+                 <Settings2 className="w-5 h-5" />
+                 Configure Route
+               </button>
+               {routePoints.length > 1 && routeStats && (
+                 <button
+                   onClick={handleExportGpx}
+                   className="flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-3 rounded-full font-semibold shadow-lg shadow-emerald-600/30 border border-emerald-500 transition-colors active:bg-emerald-700"
+                   title="Export GPX"
+                 >
+                   <Download className="w-5 h-5" />
+                   <span className="text-sm">GPX</span>
+                 </button>
+               )}
+             </div>
           </div>
 
         </div>
