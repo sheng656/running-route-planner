@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RouteConfigurator } from './components/RouteConfigurator';
 import { MapView } from './components/MapView';
 import type { DrawnFeature, MapViewHandle } from './components/MapView';
@@ -113,37 +113,39 @@ function App() {
     }
   };
 
-  const handleRequestConfirm = (payload: ConfirmDrawingPayload) => {
+  const handleRequestConfirm = useCallback((payload: ConfirmDrawingPayload) => {
     setConfirmDialog({
       isOpen: true,
       payload,
       difficulty: 'moderate',
       preferences: ['green'],
     });
-  };
+  }, []);
 
   const handleConfirmGenerate = () => {
     if (!confirmDialog.payload) return;
 
-    // Clear pending feature FIRST to prevent RouteConfigurator useEffect
-    // from re-triggering onRequestConfirm and reopening the dialog
+    const { difficulty, preferences, payload } = confirmDialog;
+
+    // Close dialog and clear ALL draw-related state before generating
+    setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
     setPendingDrawnFeature(null);
     setDrawMode(false);
     mapViewRef.current?.clearDrawing();
-    setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
 
     handleGenerateRoute({
-      difficulty: confirmDialog.difficulty,
-      preferences: confirmDialog.preferences,
-      guidingWaypoints: confirmDialog.payload.waypoints,
+      difficulty,
+      preferences,
+      guidingWaypoints: payload.waypoints,
       drawMode: true,
     });
   };
 
   const handleRedraw = () => {
-    // Close dialog, keep drawMode active so user can redraw
+    // Close dialog, re-enable draw mode so user can redraw
     setConfirmDialog({ isOpen: false, payload: null, difficulty: 'moderate', preferences: ['green'] });
     setPendingDrawnFeature(null);
+    setDrawMode(true);
     mapViewRef.current?.clearDrawing();
     mapViewRef.current?.enableDrawMode();
   };
