@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 
 type RouteMode = 'loop' | 'one-way';
 type Difficulty = 'easy' | 'moderate' | 'hard';
@@ -53,7 +53,7 @@ type SecretPayload = {
   openRouteServiceApiKey?: string;
 };
 
-const secretsManagerClient = new SecretsManagerClient({});
+const ssmClient = new SSMClient({});
 let cachedApiKeyPromise: Promise<string> | null = null;
 const ORS_AVOID_FEATURES_FOOT_WALKING = ['ferries'];
 const ORS_DISTANCE_TOLERANCE_RATIO = 0.4;
@@ -77,28 +77,30 @@ const resolveApiKeyFromSecret = async (): Promise<string> => {
     return directApiKey;
   }
 
-  const secretId = process.env.ORS_SECRET_ID;
-  if (!secretId) {
-    throw new Error('ORS_SECRET_ID is not configured');
+  const parameterName = process.env.ORS_PARAMETER_NAME;
+  if (!parameterName) {
+    throw new Error('ORS_PARAMETER_NAME is not configured');
   }
 
   if (!cachedApiKeyPromise) {
     cachedApiKeyPromise = (async () => {
-      const response = await secretsManagerClient.send(
-        new GetSecretValueCommand({
-          SecretId: secretId,
+      const response = await ssmClient.send(
+        new GetParameterCommand({
+          Name: parameterName,
+          WithDecryption: true,
         })
       );
 
-      if (!response.SecretString) {
-        throw new Error('OpenRouteService secret is empty');
+      const parameterValue = response.Parameter?.Value;
+      if (!parameterValue) {
+        throw new Error('OpenRouteService parameter is empty');
       }
 
       try {
-        const parsed = JSON.parse(response.SecretString) as SecretPayload;
-        return parsed.apiKey || parsed.ORS_API_KEY || parsed.openRouteServiceApiKey || response.SecretString;
+        const parsed = JSON.parse(parameterValue) as SecretPayload;
+        return parsed.apiKey || parsed.ORS_API_KEY || parsed.openRouteServiceApiKey || parameterValue;
       } catch {
-        return response.SecretString;
+        return parameterValue;
       }
     })();
   }

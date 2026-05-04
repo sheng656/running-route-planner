@@ -13,11 +13,10 @@ Globals:
       Variables:
         APP_NAME: running-route-planner
 Parameters:
-  OpenRouteServiceSecretId:
+  OpenRouteServiceParameterName:
     Type: String
-    NoEcho: true
-    Description: Secrets Manager secret id or ARN that stores the OpenRouteService
-      API key
+    Default: /running-route-planner/openroute-service-api-key
+    Description: SSM Parameter Store name that stores the OpenRouteService API key
   AllowedOrigin:
     Type: String
     Default: https://running-route-planner-sheng.vercel.app
@@ -50,15 +49,15 @@ Resources:
       Handler: app.handler
       Environment:
         Variables:
-          ORS_SECRET_ID:
-            Ref: OpenRouteServiceSecretId
+          ORS_PARAMETER_NAME:
+            Ref: OpenRouteServiceParameterName
       Policies:
       - Statement:
         - Effect: Allow
           Action:
-          - secretsmanager:GetSecretValue
+          - ssm:GetParameter
           Resource:
-          - Fn::Sub: arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
+          - Fn::Sub: arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${OpenRouteServiceParameterName}
       Events:
         GenerateRoute:
           Type: Api

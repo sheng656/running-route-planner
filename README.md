@@ -49,7 +49,7 @@ An intelligent, interactive running route planning application designed for runn
 - **Runtime**: Node.js 22.x (Lambda)
 - **API**: Amazon API Gateway
 - **Routing Engine**: OpenRouteService API
-- **Secrets**: AWS Secrets Manager for secure API key handling
+- **Secrets**: AWS Systems Manager Parameter Store for secure API key handling
 
 ---
 

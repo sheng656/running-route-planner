@@ -11,7 +11,7 @@
     "local:gpx": "sam local invoke ExportGpxFunction --event events/export-gpx.json --template-file template.yaml"
   },
   "devDependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.936.0",
+    "@aws-sdk/client-ssm": "^3.936.0",
     "@types/aws-lambda": "^8.10.156",
     "@types/node": "^24.12.2",
     "typescript": "^5.9.3"
