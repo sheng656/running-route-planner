@@ -104,7 +104,7 @@ sam local invoke GenerateRouteFunction --event events/generate-route.json
 
 ## 🌐 Deployment
 
-- **Frontend**: Deployed to **Vercel** for optimal performance and global edge delivery.
+- **Frontend**: Deployed to [running.sheng.nz](https://running.sheng.nz) via **Vercel** for optimal performance and global edge delivery.
 - **Backend**: Deployed to **AWS** (Lambda + API Gateway), operating within the AWS Free Tier.
 
 ---

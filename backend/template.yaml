@@ -4,7 +4,7 @@ Description: Running Route Planner backend (AWS SAM)
 
 Globals:
   Function:
-    Runtime: nodejs22.x
+    Runtime: nodejs20.x
     Timeout: 20
     MemorySize: 512
     Tracing: Active
@@ -21,7 +21,7 @@ Parameters:
     Description: Secrets Manager secret id or ARN that stores the OpenRouteService API key
   AllowedOrigin:
     Type: String
-    Default: https://running-route-planner-sheng.vercel.app
+    Default: https://running.sheng.nz
     Description: Allowed browser origin for CORS
 
 Resources:
