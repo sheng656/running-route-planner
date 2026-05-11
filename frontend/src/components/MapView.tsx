@@ -44,6 +44,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
   const drawRef = useRef<any>(null);
   const mapboxMapRef = useRef<any>(null);
   const onDrawingCompleteRef = useRef(onDrawingComplete);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   useEffect(() => {
     onDrawingCompleteRef.current = onDrawingComplete;
@@ -95,7 +96,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
 
   // Initialize Draw control
   useEffect(() => {
-    if (!mapboxMapRef.current) return;
+    if (!isMapReady || !mapboxMapRef.current) return;
 
     // Add Draw control
     const draw = new MapboxDraw({
@@ -149,7 +150,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
         drawRef.current = null;
       }
     };
-  }, []);
+  }, [isMapReady]);
 
   useEffect(() => {
     if (!drawRef.current) {
@@ -161,7 +162,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
     } else {
       drawRef.current.changeMode('simple_select');
     }
-  }, [drawMode]);
+  }, [drawMode, isMapReady]);
 
   const routeCoordinates = useMemo(() => {
     const shifted = routePoints.map((point) => point.coordinates);
@@ -272,6 +273,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
           }}
           onLoad={(evt) => {
             mapboxMapRef.current = evt.target;
+            setIsMapReady(true);
           }}
           mapStyle="mapbox://styles/mapbox/outdoors-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
