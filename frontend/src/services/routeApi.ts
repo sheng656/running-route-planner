@@ -34,7 +34,10 @@ const requireApiBaseUrl = (): string => {
   return API_BASE_URL.replace(/\/$/, '');
 };
 
-export const generateRoute = async (payload: GenerateRoutePayload): Promise<GeneratedRoute> => {
+export const generateRoute = async (
+  payload: GenerateRoutePayload,
+  signal?: AbortSignal
+): Promise<GeneratedRoute> => {
   const baseUrl = requireApiBaseUrl();
 
   const response = await fetch(`${baseUrl}/routes/generate`, {
@@ -43,6 +46,7 @@ export const generateRoute = async (payload: GenerateRoutePayload): Promise<Gene
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+    signal,
   });
 
   if (!response.ok) {

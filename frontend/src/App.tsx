@@ -44,6 +44,7 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
     isOpen: false,
     payload: null,
@@ -80,6 +81,12 @@ function App() {
     guidingWaypoints?: [number, number][];
     drawMode?: boolean;
   }) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setIsGenerating(true);
     setApiMessage(null);
 
@@ -92,7 +99,7 @@ function App() {
         preferences: payload.preferences,
         guidingWaypoints: payload.guidingWaypoints,
         drawMode: payload.drawMode,
-      });
+      }, abortController.signal);
 
       setRoutePoints(generated.points);
       setRouteStats({
@@ -106,10 +113,16 @@ function App() {
       });
       setApiMessage(payload.drawMode ? 'Route generated from drawing.' : 'Route generated from AWS backend.');
       setIsMobileSettingsOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return; // Request was cancelled
+      }
       setApiMessage(error instanceof Error ? error.message : 'Route generation failed.');
     } finally {
-      setIsGenerating(false);
+      const isCurrentRequest = abortControllerRef.current === abortController;
+      if (isCurrentRequest) {
+        setIsGenerating(false);
+      }
     }
   };
 

@@ -13,6 +13,7 @@ Globals:
     Environment:
       Variables:
         APP_NAME: running-route-planner
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
 
 Parameters:
   OpenRouteServiceParameterName:

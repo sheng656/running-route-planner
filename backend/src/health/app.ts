@@ -4,7 +4,7 @@ const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
   },
@@ -17,4 +17,4 @@ export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayP
     service: 'running-route-planner-backend',
     timestamp: new Date().toISOString(),
   });
-};
+};

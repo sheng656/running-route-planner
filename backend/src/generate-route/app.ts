@@ -64,7 +64,7 @@ const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'OPTIONS,GET,POST',
   },
@@ -569,9 +569,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return json(200, generated);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Route generation failed:', message);
     return json(502, {
-      message: 'Failed to generate route from OpenRouteService',
-      detail: message,
+      message: 'Failed to generate route due to an external service error.',
     });
   }
 };
