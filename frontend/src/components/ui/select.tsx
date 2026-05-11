@@ -83,6 +83,4 @@ export const SelectItem = React.forwardRef<
 ));
 SelectItem.displayName = SelectPrimitive.Item.displayName;
 
-export const SelectItem = ({ value, children }: any) => (
-  <option value={value}>{children}</option>
-);
+

@@ -25,7 +25,7 @@ export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) =
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={routePoints}
-          onMouseMove={(data: { activeTooltipIndex?: number } | null | undefined) => {
+          onMouseMove={(data: any) => {
             if (data && data.activeTooltipIndex !== undefined && data.activeTooltipIndex !== null) {
               onHoverPoint(Number(data.activeTooltipIndex));
             }
@@ -57,7 +57,7 @@ export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) =
             tickCount={3}
           />
           <Tooltip 
-            content={({ active, payload }: { active?: boolean; payload?: Array<{ payload: RoutePoint }> }) => {
+            content={({ active, payload }: any) => {
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
                 return (

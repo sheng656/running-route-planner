@@ -218,7 +218,7 @@ export const RouteConfigurator: React.FC<RouteConfiguratorProps> = ({
           <Label className="text-sm font-semibold">Difficulty / Elevation</Label>
           <Select 
             value={difficulty} 
-            onValueChange={setDifficulty}
+            onValueChange={(val) => setDifficulty(val as 'easy' | 'moderate' | 'hard')}
             disabled={configMode === 'draw-mode'}
           >
             <SelectTrigger className={`h-9 ${configMode === 'draw-mode' ? 'opacity-50 cursor-not-allowed' : ''}`}>

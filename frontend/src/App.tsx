@@ -17,7 +17,7 @@ type LocationSource = 'user' | 'mission-bay';
 type ConfirmDialogState = {
   isOpen: boolean;
   payload: ConfirmDrawingPayload | null;
-  difficulty: 'easy' | 'moderate' | 'hard';
+  difficulty: Difficulty;
   preferences: string[];
 };
 
@@ -66,7 +66,7 @@ function App() {
 
   const handleGenerateRoute = async (payload: {
     distanceKm?: number;
-    difficulty: 'easy' | 'moderate' | 'hard';
+    difficulty: Difficulty;
     preferences: string[];
     guidingWaypoints?: [number, number][];
     drawMode?: boolean;
@@ -446,7 +446,7 @@ function App() {
               <Label className="text-sm font-semibold">Difficulty</Label>
               <Select
                 value={confirmDialog.difficulty}
-                onValueChange={(v: string) => setConfirmDialog(prev => ({ ...prev, difficulty: v as 'easy' | 'moderate' | 'hard' }))}
+                onValueChange={(v: string) => setConfirmDialog(prev => ({ ...prev, difficulty: v as Difficulty }))}
               >
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue />

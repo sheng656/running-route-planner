@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { haversineDistance, calculateRouteLength, formatDistance, detectRouteMode, extractWaypoints } from './routeUtils';
+import { haversineDistance, calculateRouteLength, formatDistance, detectRouteMode } from './routeUtils';
 
 describe('routeUtils', () => {
   it('haversineDistance calculates distance correctly', () => {

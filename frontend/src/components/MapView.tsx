@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import Map, { Layer, Marker, Source } from 'react-map-gl';
 import type { LineLayer } from 'react-map-gl';
 import type { RoutePoint, RouteMode } from '../types/route';
@@ -41,8 +41,13 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
   onDrawingComplete,
 }, ref) => {
   const mapRef = useRef(null);
-  const drawRef = useRef<MapboxDraw | null>(null);
+  const drawRef = useRef<any>(null);
   const mapboxMapRef = useRef<any>(null);
+  const onDrawingCompleteRef = useRef(onDrawingComplete);
+
+  useEffect(() => {
+    onDrawingCompleteRef.current = onDrawingComplete;
+  }, [onDrawingComplete]);
   const [viewState, setViewState] = useState({
     longitude: startPoint[0],
     latitude: startPoint[1],
@@ -228,6 +233,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
   const routeStyle: LineLayer = {
     id: 'route-line',
     type: 'line',
+    source: 'route-source',
     paint: {
       'line-color': '#2563eb',
       'line-width': 6,

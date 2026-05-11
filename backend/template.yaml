@@ -4,7 +4,7 @@ Description: Running Route Planner backend (AWS SAM)
 
 Globals:
   Function:
-    Runtime: nodejs20.x
+    Runtime: nodejs22.x
     Timeout: 20
     MemorySize: 512
     Tracing: Active
@@ -70,7 +70,7 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
-        Target: es2022
+        Target: es2024
         Sourcemap: false
         EntryPoints:
           - app.ts
@@ -92,7 +92,7 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
-        Target: es2022
+        Target: es2024
         Sourcemap: false
         EntryPoints:
           - app.ts
@@ -114,7 +114,7 @@ Resources:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
-        Target: es2022
+        Target: es2024
         Sourcemap: false
         EntryPoints:
           - app.ts
