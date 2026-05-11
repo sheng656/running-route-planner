@@ -113,8 +113,8 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
           type: feature.geometry.type as 'LineString' | 'Polygon',
           coordinates: feature.geometry.coordinates,
         };
-        if (onDrawingComplete) {
-          onDrawingComplete(drawnFeature);
+        if (onDrawingCompleteRef.current) {
+          onDrawingCompleteRef.current(drawnFeature);
         }
       }
     };
@@ -127,8 +127,8 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
           type: feature.geometry.type as 'LineString' | 'Polygon',
           coordinates: feature.geometry.coordinates,
         };
-        if (onDrawingComplete) {
-          onDrawingComplete(drawnFeature);
+        if (onDrawingCompleteRef.current) {
+          onDrawingCompleteRef.current(drawnFeature);
         }
       }
     };
@@ -144,7 +144,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(({
         drawRef.current = null;
       }
     };
-  }, [onDrawingComplete]);
+  }, []);
 
   useEffect(() => {
     if (!drawRef.current) {

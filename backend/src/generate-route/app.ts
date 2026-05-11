@@ -118,6 +118,19 @@ const asDifficultyFactor = (difficulty: Difficulty): number => {
   return 1.0;
 };
 
+const isValidCoordinate = (coord: any): boolean => {
+  return (
+    Array.isArray(coord) &&
+    coord.length === 2 &&
+    typeof coord[0] === 'number' &&
+    typeof coord[1] === 'number' &&
+    coord[0] >= -180 &&
+    coord[0] <= 180 &&
+    coord[1] >= -90 &&
+    coord[1] <= 90
+  );
+};
+
 const parseRequestBody = (event: APIGatewayProxyEvent): GenerateRouteRequest | null => {
   if (!event.body) {
     return null;
@@ -130,13 +143,7 @@ const parseRequestBody = (event: APIGatewayProxyEvent): GenerateRouteRequest | n
     if (parsed.drawMode && parsed.guidingWaypoints && Array.isArray(parsed.guidingWaypoints)) {
       if (
         parsed.guidingWaypoints.length < 2 ||
-        !parsed.guidingWaypoints.every(
-          (wp) =>
-            Array.isArray(wp) &&
-            wp.length === 2 &&
-            typeof wp[0] === 'number' &&
-            typeof wp[1] === 'number'
-        ) ||
+        !parsed.guidingWaypoints.every(isValidCoordinate) ||
         typeof parsed.distanceKm !== 'number' ||
         (parsed.routeMode !== 'loop' && parsed.routeMode !== 'one-way') ||
         (parsed.difficulty !== 'easy' && parsed.difficulty !== 'moderate' && parsed.difficulty !== 'hard') ||
@@ -158,10 +165,7 @@ const parseRequestBody = (event: APIGatewayProxyEvent): GenerateRouteRequest | n
 
     // Standard mode (without draw)
     if (
-      !parsed.startPoint ||
-      parsed.startPoint.length !== 2 ||
-      typeof parsed.startPoint[0] !== 'number' ||
-      typeof parsed.startPoint[1] !== 'number' ||
+      !isValidCoordinate(parsed.startPoint) ||
       typeof parsed.distanceKm !== 'number' ||
       parsed.distanceKm <= 0 ||
       (parsed.routeMode !== 'loop' && parsed.routeMode !== 'one-way') ||
@@ -172,7 +176,7 @@ const parseRequestBody = (event: APIGatewayProxyEvent): GenerateRouteRequest | n
     }
 
     return {
-      startPoint: parsed.startPoint,
+      startPoint: parsed.startPoint as [number, number],
       distanceKm: parsed.distanceKm,
       routeMode: parsed.routeMode,
       difficulty: parsed.difficulty,
