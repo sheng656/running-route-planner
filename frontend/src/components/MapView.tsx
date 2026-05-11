@@ -1,12 +1,9 @@
-// @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import Map, { Layer, Marker, Source } from 'react-map-gl';
 import type { LineLayer } from 'react-map-gl';
-import type { RoutePoint } from '../data/mockRoute';
+import type { RoutePoint, RouteMode } from '../types/route';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-
-type RouteMode = 'loop' | 'one-way';
 
 export interface DrawnFeature {
   type: 'LineString' | 'Polygon';

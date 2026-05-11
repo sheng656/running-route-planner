@@ -1,7 +1,4 @@
-import type { RoutePoint } from '../data/mockRoute';
-
-export type RouteMode = 'loop' | 'one-way';
-export type Difficulty = 'easy' | 'moderate' | 'hard';
+import type { RoutePoint, RouteMode, Difficulty, RouteStats } from '../types/route';
 
 export type GenerateRoutePayload = {
   startPoint: [number, number];
@@ -13,15 +10,8 @@ export type GenerateRoutePayload = {
   drawMode?: boolean;
 };
 
-export type GeneratedRoute = {
+export type GeneratedRoute = RouteStats & {
   routeId: string;
-  name: string;
-  scenicSummary: string;
-  distance: number;
-  durationRange: string;
-  maxElevation: number;
-  totalAscent: number;
-  scenicRating: number;
   points: RoutePoint[];
 };
 

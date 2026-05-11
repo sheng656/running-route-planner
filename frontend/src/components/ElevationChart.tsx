@@ -1,6 +1,6 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import type { RoutePoint } from '../data/mockRoute';
+import type { RoutePoint } from '../types/route';
 
 interface Props {
   onHoverPoint: (index: number | null) => void;
@@ -25,7 +25,7 @@ export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) =
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={routePoints}
-          onMouseMove={(data: any) => {
+          onMouseMove={(data: { activeTooltipIndex?: number } | null | undefined) => {
             if (data && data.activeTooltipIndex !== undefined && data.activeTooltipIndex !== null) {
               onHoverPoint(Number(data.activeTooltipIndex));
             }
@@ -41,7 +41,7 @@ export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) =
           </defs>
           <XAxis 
             dataKey="distance" 
-            tickFormatter={(val: any) => `${(val / 1000).toFixed(1)}`}
+            tickFormatter={(val: number) => `${(val / 1000).toFixed(1)}`}
             tick={{ fontSize: 10, fill: '#94a3b8' }}
             axisLine={false}
             tickLine={false}
@@ -57,7 +57,7 @@ export const ElevationChart: React.FC<Props> = ({ onHoverPoint, routePoints }) =
             tickCount={3}
           />
           <Tooltip 
-            content={({ active, payload }: any) => {
+            content={({ active, payload }: { active?: boolean; payload?: Array<{ payload: RoutePoint }> }) => {
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
                 return (

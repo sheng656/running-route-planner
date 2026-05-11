@@ -10,8 +10,8 @@ import {
   calculateRouteLength, 
   extractWaypoints,
 } from '../utils/routeUtils';
+import type { RouteMode } from '../types/route';
 
-type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
 type ConfigMode = 'default' | 'draw-mode';
 

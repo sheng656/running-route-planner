@@ -1,3 +1,5 @@
+export const MISSION_BAY_COORDINATES: [number, number] = [174.832, -36.848];
+
 /**
  * Route utility functions for drawing operations
  */
@@ -160,7 +162,7 @@ export function formatDistance(distanceKm: number): string {
   if (distanceKm < 1) {
     return `${(distanceKm * 1000).toFixed(0)} m`;
   }
-  return `${distanceKm.toFixed(2)} km`;
+  return `${distanceKm.toFixed(1)} km`;
 }
 
 /**

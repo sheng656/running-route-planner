@@ -5,24 +5,14 @@ import type { DrawnFeature, MapViewHandle } from './components/MapView';
 import type { ConfirmDrawingPayload } from './components/RouteConfigurator';
 import { ElevationChart } from './components/ElevationChart';
 import { AreaChart, TrendingUp, Map as MapIcon, Star, Settings2, X, Trash2, Download } from 'lucide-react';
-import { MISSION_BAY_COORDINATES, type RoutePoint } from './data/mockRoute';
 import { exportRouteToGpx, generateRoute } from './services/routeApi';
 import { Button } from './components/ui/button';
 import { Label } from './components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
-import { formatDistance } from './utils/routeUtils';
+import { formatDistance, MISSION_BAY_COORDINATES } from './utils/routeUtils';
+import type { RoutePoint, RouteMode, RouteStats, Difficulty } from './types/route';
 
-type RouteMode = 'loop' | 'one-way';
 type LocationSource = 'user' | 'mission-bay';
-type RouteStats = {
-  name: string;
-  scenicSummary: string;
-  distance: number;
-  durationRange: string;
-  maxElevation: number;
-  totalAscent: number;
-  scenicRating: number;
-};
 
 type ConfirmDialogState = {
   isOpen: boolean;
