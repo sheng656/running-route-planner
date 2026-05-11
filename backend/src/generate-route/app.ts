@@ -118,7 +118,7 @@ const asDifficultyFactor = (difficulty: Difficulty): number => {
   return 1.0;
 };
 
-const isValidCoordinate = (coord: any): boolean => {
+export const isValidCoordinate = (coord: any): boolean => {
   return (
     Array.isArray(coord) &&
     coord.length === 2 &&

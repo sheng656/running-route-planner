@@ -9,7 +9,7 @@ type ExportGpxRequest = {
   }>;
 };
 
-const xmlEscape = (value: string): string =>
+export const xmlEscape = (value: string): string =>
   value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -74,7 +74,7 @@ const toGpx = (payload: ExportGpxRequest): string => {
 </gpx>`;
 };
 
-const sanitizeFileName = (name: string): string => {
+export const sanitizeFileName = (name: string): string => {
   const normalized = name.trim().toLowerCase().replace(/\s+/g, '-');
   const safe = normalized.replace(/[^a-z0-9-_]/g, '');
   return safe.length > 0 ? safe : 'route';
