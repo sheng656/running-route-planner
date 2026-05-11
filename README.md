@@ -101,7 +101,49 @@ sam local invoke GenerateRouteFunction --event events/generate-route.json
 ```
 
 ---
+## ✅ Testing
 
+The project includes comprehensive unit test coverage across both frontend and backend using **Vitest**:
+
+### Frontend Tests
+```bash
+cd frontend
+npm test
+```
+- ✓ **Route utilities** (`routeUtils.test.ts`): Distance calculation, route mode detection
+- ✓ **Route API** integration tests
+
+### Backend Tests
+```bash
+cd backend
+npm test
+```
+- ✓ **GPX Export** (`export-gpx/app.test.ts`): XML escaping, filename sanitization
+- ✓ **Route Generation** (`generate-route/app.test.ts`): Coordinate validation, boundary checks
+
+---
+
+## 🔒 Security & Quality Improvements
+
+### Phase 1: Core Security & Bug Fixes
+- **CORS Protection**: Backend API now accepts configurable `AllowedOrigin` parameter instead of wildcard `*`
+- **Error Sanitization**: API errors are generalized before returning to clients to prevent exposing internal implementation details
+- **Input Validation**: Strict coordinate boundary validation (longitude: -180 to 180, latitude: -90 to 90)
+
+### Phase 2: Code Quality & UI Stability
+- **Radix UI Integration**: Replaced custom UI components with production-grade [`@radix-ui`](https://www.radix-ui.com/) primitives for accessibility and robustness
+- **Type Safety**: Centralized type definitions in `frontend/src/types/route.ts`
+- **Race Condition Prevention**: Implemented `AbortController` for HTTP requests to handle rapid consecutive "Generate Route" clicks gracefully
+- **Frontend Unit Tests**: Complete test coverage for route calculations, elevation formatting, and UI logic
+
+### Phase 3: Memory & Performance Optimizations
+- **Memory Leak Fixes**: 
+  - Stabilized `MapView.tsx` callbacks with `useRef` to prevent repeated Mapbox Draw instance unmounting
+  - Proper cleanup of `requestAnimationFrame` IDs in effect hooks
+- **Backend Validation**: Boundary checks on all incoming coordinates before passing to OpenRouteService
+- **Backend Unit Tests**: Test coverage for GPX sanitization and coordinate validation logic
+
+---
 ## 🌐 Deployment
 
 - **Frontend**: Deployed to [running.sheng.nz](https://running.sheng.nz) via **Vercel** for optimal performance and global edge delivery.
