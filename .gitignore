@@ -50,3 +50,9 @@ backend-dotnet/**/WorkerExtensions/
 
 # NuGet packages (restored automatically, no need to commit)
 *.nupkg
+
+# ── Azurite local emulator storage ────────────────────────────────────────────
+__blobstorage__/
+__queuestorage__/
+__azurite_db_*.json
+AzuriteConfig

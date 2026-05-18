@@ -5,7 +5,7 @@ import type { DrawnFeature, MapViewHandle } from './components/MapView';
 import type { ConfirmDrawingPayload } from './components/RouteConfigurator';
 import { ElevationChart } from './components/ElevationChart';
 import { AreaChart, TrendingUp, Map as MapIcon, Star, Settings2, X, Trash2, Download } from 'lucide-react';
-import { exportRouteToGpx, generateRoute } from './services/routeApi';
+import { exportRouteToGpx, generateRoute, getActiveBackend } from './services/routeApi';
 import { BackendToggle } from './components/BackendToggle';
 import { Button } from './components/ui/button';
 import { Label } from './components/ui/label';
@@ -102,7 +102,8 @@ function App() {
         totalAscent: generated.totalAscent,
         scenicRating: generated.scenicRating,
       });
-      setApiMessage(payload.drawMode ? 'Route generated from drawing.' : 'Route generated from AWS backend.');
+      const backendName = getActiveBackend() === 'azure' ? 'Azure' : 'AWS';
+      setApiMessage(payload.drawMode ? 'Route generated from drawing.' : `Route generated from ${backendName} backend.`);
       setIsMobileSettingsOpen(false);
     } catch (error: any) {
       if (error?.name === 'AbortError') {
@@ -238,7 +239,7 @@ function App() {
         </div>
 
         {/* Backend Toggle — sits at the very bottom of the sidebar */}
-        <div className="hidden md:flex px-4 pb-4 mt-auto">
+        <div className="flex px-4 pb-4 mt-auto border-t pt-3 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <BackendToggle className="w-full" />
         </div>
       </aside>
