@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "RunningRoutePlanner.Functions": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7016",
+      "launchBrowser": false
+    }
+  }
+}

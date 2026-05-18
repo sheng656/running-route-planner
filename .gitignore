@@ -20,14 +20,33 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
+
+# Env files
 frontend/.env
 frontend/frontend/.env
 
 # Local implementation notes (do not commit)
 AWS_SAM_ORS_IMPLEMENTATION.local.md
 
-# AWS SAM artifacts
+# ── AWS SAM ───────────────────────────────────────────────────────────────────
 backend/.aws-sam/
 backend/samconfig.toml
+
+# ── .NET / C# ─────────────────────────────────────────────────────────────────
+# Build output
+backend-dotnet/**/bin/
+backend-dotnet/**/obj/
+
+# Visual Studio artifacts
+.vs/
+*.user
+
+# Azure Functions — local secrets (NEVER commit, contains ORS_API_KEY)
+backend-dotnet/**/local.settings.json
+
+# Azure Functions worker extensions (auto-generated during build)
+backend-dotnet/**/WorkerExtensions/
+
+# NuGet packages (restored automatically, no need to commit)
+*.nupkg

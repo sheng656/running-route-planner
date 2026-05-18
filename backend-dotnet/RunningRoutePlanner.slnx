@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RunningRoutePlanner.Core/RunningRoutePlanner.Core.csproj" />
+    <Project Path="src/RunningRoutePlanner.Functions/RunningRoutePlanner.Functions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RunningRoutePlanner.Core.Tests/RunningRoutePlanner.Core.Tests.csproj" />
+  </Folder>
+</Solution>
