@@ -3,6 +3,7 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+[![Azure](https://img.shields.io/badge/Azure-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com/)
 [![Mapbox](https://img.shields.io/badge/Mapbox-000000?style=for-the-badge&logo=mapbox&logoColor=white)](https://www.mapbox.com/)
 
 An intelligent, interactive running route planning application designed for runners who want seamless route discovery and Garmin-ready exports. Built with a focus on modern UX, serverless architecture, and real-world utility.
@@ -44,12 +45,17 @@ An intelligent, interactive running route planning application designed for runn
 - **Charts**: Recharts for elevation visualization
 - **Icons**: Lucide React
 
-### Backend (Serverless)
-- **Infrastructure**: AWS SAM (Serverless Application Model)
-- **Runtime**: Node.js 22.x (Lambda)
-- **API**: Amazon API Gateway
-- **Routing Engine**: OpenRouteService API
-- **Secrets**: AWS Systems Manager Parameter Store for secure API key handling
+### Backend (Multi-Backend / Serverless)
+- **AWS Serverless Path**:
+  - **Infrastructure**: AWS SAM (Serverless Application Model)
+  - **Runtime**: Node.js 22.x (Lambda)
+  - **API Gateway**: Amazon API Gateway
+  - **Secrets**: AWS Systems Manager Parameter Store
+- **Azure Serverless Path**:
+  - **Runtime**: C# .NET 8 (Isolated Worker)
+  - **Infrastructure**: Azure Functions v4
+  - **Secrets**: Application Settings
+- **Core Routing Engine**: OpenRouteService API
 
 ---
 
@@ -61,10 +67,14 @@ An intelligent, interactive running route planning application designed for runn
 │   ├── src/components/     # UI components (Map, Configurator, Charts)
 │   ├── src/services/       # API integration logic
 │   └── src/utils/          # Route calculation & formatting helpers
-├── backend/                # AWS SAM Backend
+├── backend/                # AWS SAM Backend (Node.js Lambda)
 │   ├── src/generate-route/ # Route generation Lambda (ORS integration)
 │   ├── src/export-gpx/     # GPX transformation & export Lambda
 │   └── template.yaml       # AWS CloudFormation/SAM infrastructure
+├── backend-dotnet/         # Azure Functions Backend (C# .NET 8)
+│   ├── src/RunningRoutePlanner.Core/       # Business logic, ORS client & models
+│   ├── src/RunningRoutePlanner.Functions/  # Azure Functions endpoints (CORS, GPX, Route)
+│   └── tests/                              # Unit & integration test suite
 └── README.md               # You are here
 ```
 
@@ -88,7 +98,7 @@ echo "VITE_MAPBOX_TOKEN=your_token_here" > .env
 npm run dev
 ```
 
-### 3. Backend Setup
+### 3. AWS Backend Setup (Node.js)
 ```bash
 cd backend
 npm install
@@ -98,6 +108,17 @@ sam build
 
 # Local invocation (optional)
 sam local invoke GenerateRouteFunction --event events/generate-route.json
+```
+
+### 4. Azure Backend Setup (C# .NET)
+```bash
+cd backend-dotnet/src/RunningRoutePlanner.Functions
+
+# Start Azurite local storage emulator (required for local execution)
+npx azurite --silent
+
+# Start Azure Functions local runtime
+func start
 ```
 
 ---
@@ -113,13 +134,20 @@ npm test
 - ✓ **Route utilities** (`routeUtils.test.ts`): Distance calculation, route mode detection
 - ✓ **Route API** integration tests
 
-### Backend Tests
+### AWS Backend Tests (Node.js)
 ```bash
 cd backend
 npm test
 ```
 - ✓ **GPX Export** (`export-gpx/app.test.ts`): XML escaping, filename sanitization
 - ✓ **Route Generation** (`generate-route/app.test.ts`): Coordinate validation, boundary checks
+
+### Azure Backend Tests (C# .NET)
+```bash
+cd backend-dotnet
+dotnet test
+```
+- ✓ **Core Services Tests** (`RunningRoutePlanner.Core.Tests`): ORS API client, GPX transformation logic, coordinate validations
 
 ---
 
@@ -147,7 +175,8 @@ npm test
 ## 🌐 Deployment
 
 - **Frontend**: Deployed to [running.sheng.nz](https://running.sheng.nz) via **Vercel** for optimal performance and global edge delivery.
-- **Backend**: Deployed to **AWS** (Lambda + API Gateway), operating within the AWS Free Tier.
+- **Backend (AWS)**: Deployed to **AWS** (Lambda + API Gateway), operating within the AWS Free Tier.
+- **Backend (Azure)**: Deployed to **Microsoft Azure** (Azure Functions v4 isolated worker plan + Storage Account).
 
 ---
 
